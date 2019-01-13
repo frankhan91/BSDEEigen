@@ -8,7 +8,7 @@
   },
   "nn_config": {
     "trig_order": 3,
-    "num_hiddens": [40, 40, 2],
+    "num_hiddens": [40, 40],
     "lr_values": [1e-3, 1e-4, 1e-5],
     "lr_boundaries": [4000, 6000],
     "num_iterations": 8000,
