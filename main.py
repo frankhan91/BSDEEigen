@@ -40,9 +40,9 @@ def main():
             # save training history
             np.savetxt('{}_log_{}.csv'.format(path_prefix, idx_run),
                        training_history,
-                       fmt=['%d', '%.5e', '%.5e', '%.5e', '%d'],
+                       fmt=['%d', '%.5e', '%.5e', '%.5e', '%.5e', '%.5e', '%d'],
                        delimiter=",",
-                       header="step,train_loss, init_loss,init_rel_loss,elapsed_time",
+                       header="step,train_loss, init_loss,init_rel_loss,eigen, l2, elapsed_time",
                        comments='')
 
 

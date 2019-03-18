@@ -19,7 +19,7 @@ class Equation(object):
 
     def f_tf(self, x, y, z):
         """Generator function in the PDE."""
-        return self.eigen * y
+        return y
 
     def g_tf(self, x):
         """Terminal condition of the PDE."""
@@ -33,8 +33,9 @@ class LaplacianEigen(Equation):
         self.sigma = np.sqrt(2.0)
         self.eigen_array = np.reshape(np.array(eqn_config.eigen_array), [1, self.dim])
         self.eigen = np.sum(self.eigen_array ** 2)
-        # self._const_fac = np.sqrt(2.0) ** self._dim
-        self.const_fac = 1 / ((np.pi / 2) ** self.dim)
+#        self.eigen = tf.get_variable('eigen', shape=[1], dtype=tf.float64, initializer=None, trainable=True)
+        self._const_fac = np.sqrt(2.0) ** self.dim
+        # self.const_fac = (np.pi / 2) ** (self.dim)
 
     def sample(self, num_sample):
         dw_sample = normal.rvs(size=[num_sample,
@@ -47,8 +48,17 @@ class LaplacianEigen(Equation):
         return dw_sample, x_sample
 
     def g_tf(self, x):
-        return tf.reduce_prod(tf.sin(self.eigen_array * x), axis=1, keepdims=True) * self.const_fac
+#        return 1 + 0.1* tf.reduce_prod(tf.sin(self.eigen_array * x), axis=1, keepdims=True)
+        return tf.reduce_prod(tf.sin(self.eigen_array * x), axis=1, keepdims=True)*self._const_fac + \
+               0.05*tf.reduce_prod(tf.sin(2*self.eigen_array * x), axis=1, keepdims=True)*self._const_fac
+#        return tf.reduce_prod(x * (np.pi - x) * 2 / (np.pi ** 2), axis=1, keepdims=True) * self.const_fac
 
     def true_z(self, x):
-        prod = tf.reduce_prod(tf.sin(self.eigen_array * x), axis=1, keepdims=True) * self.const_fac
-        return prod / tf.tan(self.eigen_array * x) * self.eigen_array * self.sigma
+        return 0
+#        prod = tf.reduce_prod(tf.sin(self.eigen_array * x), axis=1, keepdims=True) * self.const_fac
+#        return prod / tf.tan(self.eigen_array * x) * self.eigen_array * self.sigma
+
+    def true_y(self, x):
+        shape = tf.shape(x)
+        return tf.ones(shape, tf.float64)
+#        return tf.reduce_prod(tf.sin(self.eigen_array * x), axis=1, keepdims=True)*self._const_fac
