@@ -42,7 +42,7 @@ class LaplacianEigen(Equation):
                                      self.dim,
                                      self.num_time_interval]) * self.sqrt_delta_t
         x_sample = np.zeros([num_sample, self.dim, self.num_time_interval + 1])
-        x_sample[:, :, 0] = np.random.uniform(0.0, np.pi, size=[num_sample, self.dim])
+        x_sample[:, :, 0] = np.random.uniform(0.0, 2*np.pi, size=[num_sample, self.dim])
         for i in range(self.num_time_interval):
             x_sample[:, :, i + 1] = x_sample[:, :, i] + self.sigma * dw_sample[:, :, i]
         return dw_sample, x_sample
