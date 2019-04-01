@@ -69,11 +69,11 @@ class FeedForwardModel(object):
             y = y_init
             for t in range(0, self.num_time_interval-1):
                 y = y - self.bsde.delta_t * (self.bsde.f_tf(self.x[:, :, t], y, z) + self.eigen *y) + \
-                    tf.reduce_sum(z * self.dw[:, :, t], 1, keepdims=True)
+                    self.bsde.sigma * tf.reduce_sum(z * self.dw[:, :, t], 1, keepdims=True)
                 z = net_z(self.x[:, :, t + 1], reuse=True)
             # terminal time
             y = y - self.bsde.delta_t * (self.bsde.f_tf(self.x[:, :, -2], y, z) + self.eigen *y) + \
-                tf.reduce_sum(z * self.dw[:, :, -1], 1, keepdims=True)
+                self.bsde.sigma * tf.reduce_sum(z * self.dw[:, :, -1], 1, keepdims=True)
 
             y_xT = net_y(self.x[:, :, -1], reuse=True) / tf.sqrt(yl2) * sign
             delta = y - y_xT
@@ -122,11 +122,11 @@ class FeedForwardModel(object):
             z = self.bsde.true_z(x_init)
             for t in range(0, self.num_time_interval - 1):
                 y = y - self.bsde.delta_t * (self.bsde.f_tf(self.x[:, :, t], y, z) + self.eigen * y) + \
-                    tf.reduce_sum(z * self.dw[:, :, t], 1, keepdims=True)
+                    self.bsde.sigma * tf.reduce_sum(z * self.dw[:, :, t], 1, keepdims=True)
                 z = self.bsde.true_z(self.x[:, :, t + 1])
             # terminal time
             y = y - self.bsde.delta_t * (self.bsde.f_tf(self.x[:, :, -2], y, z) + self.eigen * y) + \
-                tf.reduce_sum(z * self.dw[:, :, -1], 1, keepdims=True)
+                self.bsde.sigma * tf.reduce_sum(z * self.dw[:, :, -1], 1, keepdims=True)
 
             #y_xT = net_y(self.x[:, :, -1], reuse=True) / tf.sqrt(yl2) * sign
             y_xT = self.bsde.true_y(self.x[:, :, -1])
@@ -135,7 +135,7 @@ class FeedForwardModel(object):
             #self.train_loss = tf.reduce_mean(delta ** 2) * 500
             self.train_loss = tf.reduce_mean(
                 tf.where(tf.abs(delta) < DELTA_CLIP, tf.square(delta),
-                          2 * DELTA_CLIP * tf.abs(delta) - DELTA_CLIP ** 2)) * 500
+                          2 * DELTA_CLIP * tf.abs(delta) - DELTA_CLIP ** 2)) * 50
                 # + tf.reduce_mean(tf.where(tf.abs(grad_y) < DELTA_CLIP, tf.square(grad_y), 2 * DELTA_CLIP * tf.abs(grad_y) - DELTA_CLIP ** 2))
         # f_tf also gives the true eigenfunction
         true_init = self.bsde.true_y(self.x[:, :, 0])
