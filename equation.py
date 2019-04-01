@@ -86,7 +86,7 @@ class FokkerPlanckEigen(Equation):
         x_sample[:, :, 0] = np.random.uniform(0.0, 2*np.pi, size=[num_sample, self.dim])
         for i in range(self.num_time_interval):
             # wrong
-            x_sample[:, :, i + 1] = x_sample[:, :, i] - \
+            x_sample[:, :, i + 1] = x_sample[:, :, i] + \
             self.grad_v(x_sample[:, :, i])*self.delta_t + self.sigma * dw_sample[:, :, i]
 #            x_sample[:, :, i + 1] = x_sample[:, :, i] + \
 #            self.grad_v(self, x_sample[:, :, i])*self.delta_t + self.sigma * dw_sample[:, :, i]
@@ -99,6 +99,6 @@ class FokkerPlanckEigen(Equation):
     def true_z(self, x):
         shape = tf.shape(x)
         x1 = tf.concat([tf.reshape(x[:,0],[shape[0],1]), tf.zeros(shape-[0, 1],tf.float64)], 1)
-        return tf.math.sin(x1) * tf.math.exp(-tf.math.cos(x1))
+        return tf.sin(x1) * tf.exp(-tf.cos(x1))
 
     
