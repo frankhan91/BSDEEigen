@@ -87,6 +87,9 @@ class FeedForwardModel(object):
         mask = tf.greater(tf.abs(true_init), 0.1)
         rel_err = tf.abs((y_init - true_init) / true_init)
         rel_err = tf.boolean_mask(rel_err, mask)
+        #self.init_rel_loss = tf.reduce_mean(rel_err)
+        #self.init_loss = tf.reduce_mean((true_init - y_init) ** 2)
+        #self.l2 = tf.reduce_mean((y-1) ** 2)
         self.init_rel_loss = tf.reduce_mean(rel_err)
         self.init_loss = tf.reduce_mean((true_init - y_init) ** 2)
         self.l2 = tf.reduce_mean((y-1) ** 2)
@@ -115,21 +118,21 @@ class FeedForwardModel(object):
             x_init = self.x[:, :, 0]
             #y_init = net_y(x_init)
             y_init = self.bsde.true_y(x_init)
-            yl2 = tf.reduce_mean(y_init ** 2)
+            #yl2 = tf.reduce_mean(y_init ** 2)
             sign = tf.sign(tf.reduce_sum(y_init))
-            y_init = y_init / tf.sqrt(yl2) * sign
+            y_init = y_init
             y = y_init
             z = self.bsde.true_z(x_init)
             for t in range(0, self.num_time_interval - 1):
                 y = y - self.bsde.delta_t * (self.bsde.f_tf(self.x[:, :, t], y, z) + self.eigen * y) + \
-                    tf.reduce_sum(z * self.dw[:, :, t], 1, keepdims=True)
+                    self.bsde.sigma * tf.reduce_sum(z * self.dw[:, :, t], 1, keepdims=True)
                 z = self.bsde.true_z(self.x[:, :, t + 1])
             # terminal time
             y = y - self.bsde.delta_t * (self.bsde.f_tf(self.x[:, :, -2], y, z) + self.eigen * y) + \
-                tf.reduce_sum(z * self.dw[:, :, -1], 1, keepdims=True)
+                self.bsde.sigma * tf.reduce_sum(z * self.dw[:, :, -1], 1, keepdims=True)
 
             #y_xT = net_y(self.x[:, :, -1], reuse=True) / tf.sqrt(yl2) * sign
-            y_xT = self.bsde.true_y(self.x[:, :, -1])
+            y_xT = self.bsde.true_y(self.x[:, :, -1]) 
             delta = y - y_xT
             # use linear approximation outside the clipped range
             #self.train_loss = tf.reduce_mean(delta ** 2) * 500
@@ -144,7 +147,8 @@ class FeedForwardModel(object):
         rel_err = tf.boolean_mask(rel_err, mask)
         self.init_rel_loss = tf.reduce_mean(rel_err)
         self.init_loss = tf.reduce_mean((true_init - y_init) ** 2)
-        self.l2 = tf.reduce_mean((y - 1) ** 2)
+        
+        self.l2 = sign
 
         # train operations
         global_step = tf.get_variable('global_step', [],
