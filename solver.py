@@ -64,6 +64,8 @@ class FeedForwardModel(object):
             y_init = net_y(x_init)
             z = net_z(x_init)
             yl2 = tf.reduce_mean(y_init ** 2)
+            # stop gradient
+            # yl2 = tf.stop_gradient(yl2)
             sign = tf.sign(tf.reduce_sum(y_init))
             y_init = y_init / tf.sqrt(yl2) * sign
             y = y_init
@@ -83,16 +85,15 @@ class FeedForwardModel(object):
                          2 * DELTA_CLIP * tf.abs(delta) - DELTA_CLIP ** 2)) * 100 
                 # + tf.reduce_mean(tf.where(tf.abs(grad_y) < DELTA_CLIP, tf.square(grad_y), 2 * DELTA_CLIP * tf.abs(grad_y) - DELTA_CLIP ** 2))
         true_init = self.bsde.true_y(self.x[:, :, 0])
+        true_init = true_init / tf.sqrt(tf.reduce_mean(true_init ** 2))
 #        g = self.bsde.g_tf(self.x[:, :, 0])
         mask = tf.greater(tf.abs(true_init), 0.1)
         rel_err = tf.abs((y_init - true_init) / true_init)
         rel_err = tf.boolean_mask(rel_err, mask)
-        #self.init_rel_loss = tf.reduce_mean(rel_err)
-        #self.init_loss = tf.reduce_mean((true_init - y_init) ** 2)
-        #self.l2 = tf.reduce_mean((y-1) ** 2)
+        
         self.init_rel_loss = tf.reduce_mean(rel_err)
         self.init_loss = tf.reduce_mean((true_init - y_init) ** 2)
-        self.l2 = tf.reduce_mean((y-1) ** 2)
+        self.l2 = yl2
 
         # train operations
         global_step = tf.get_variable('global_step', [],
@@ -102,6 +103,7 @@ class FeedForwardModel(object):
                                                     self.nn_config.lr_boundaries,
                                                     self.nn_config.lr_values)
         trainable_variables = tf.trainable_variables()
+        #yl2 = tf.stop_gradient(yl2)
         grads = tf.gradients(self.train_loss, trainable_variables)
         optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
         apply_op = optimizer.apply_gradients(zip(grads, trainable_variables),
@@ -119,17 +121,16 @@ class FeedForwardModel(object):
             #y_init = net_y(x_init)
             y_init = self.bsde.true_y(x_init)
             #yl2 = tf.reduce_mean(y_init ** 2)
-            sign = tf.sign(tf.reduce_sum(y_init))
-            y_init = y_init
+            #sign = tf.sign(tf.reduce_sum(y_init))
             y = y_init
             z = self.bsde.true_z(x_init)
             for t in range(0, self.num_time_interval - 1):
                 y = y - self.bsde.delta_t * (self.bsde.f_tf(self.x[:, :, t], y, z) + self.eigen * y) + \
-                    self.bsde.sigma * tf.reduce_sum(z * self.dw[:, :, t], 1, keepdims=True)
+                    tf.reduce_sum(z * self.dw[:, :, t], 1, keepdims=True)
                 z = self.bsde.true_z(self.x[:, :, t + 1])
             # terminal time
             y = y - self.bsde.delta_t * (self.bsde.f_tf(self.x[:, :, -2], y, z) + self.eigen * y) + \
-                self.bsde.sigma * tf.reduce_sum(z * self.dw[:, :, -1], 1, keepdims=True)
+                tf.reduce_sum(z * self.dw[:, :, -1], 1, keepdims=True)
 
             #y_xT = net_y(self.x[:, :, -1], reuse=True) / tf.sqrt(yl2) * sign
             y_xT = self.bsde.true_y(self.x[:, :, -1]) 
@@ -138,7 +139,7 @@ class FeedForwardModel(object):
             #self.train_loss = tf.reduce_mean(delta ** 2) * 500
             self.train_loss = tf.reduce_mean(
                 tf.where(tf.abs(delta) < DELTA_CLIP, tf.square(delta),
-                          2 * DELTA_CLIP * tf.abs(delta) - DELTA_CLIP ** 2)) * 50
+                          2 * DELTA_CLIP * tf.abs(delta) - DELTA_CLIP ** 2)) * 500
                 # + tf.reduce_mean(tf.where(tf.abs(grad_y) < DELTA_CLIP, tf.square(grad_y), 2 * DELTA_CLIP * tf.abs(grad_y) - DELTA_CLIP ** 2))
         # f_tf also gives the true eigenfunction
         true_init = self.bsde.true_y(self.x[:, :, 0])
@@ -147,8 +148,7 @@ class FeedForwardModel(object):
         rel_err = tf.boolean_mask(rel_err, mask)
         self.init_rel_loss = tf.reduce_mean(rel_err)
         self.init_loss = tf.reduce_mean((true_init - y_init) ** 2)
-        
-        self.l2 = sign
+        self.l2 = tf.reduce_mean((y-1) ** 2)
 
         # train operations
         global_step = tf.get_variable('global_step', [],

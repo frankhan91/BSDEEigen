@@ -63,18 +63,18 @@ class FokkerPlanckEigen(Equation):
         
     def v(self, x):
         # the size of x is (num_sample, dim)
-        return tf.cos(x[:,0])
+        return tf.cos(x[:,0:1])
     
     def grad_v(self, x):
         temp = -np.sin(x)
-        temp[:,1:self.dim-1] = 0
+        temp[:,1:self.dim] = 0
         return temp
     
     def laplician_v(self, x):
-        return -tf.cos(x[:,0])
+        return -tf.cos(x[:,0:1])
     
     def f_tf(self, x, y, z):
-        return -y * tf.cos(x[:,0])
+        return -y * tf.cos(x[:,0:1])
 #        return y * self.laplician_v(self, x)
 
     def sample(self, num_sample):
@@ -85,7 +85,6 @@ class FokkerPlanckEigen(Equation):
         #for now X_0 is uniformly sampled
         x_sample[:, :, 0] = np.random.uniform(0.0, 2*np.pi, size=[num_sample, self.dim])
         for i in range(self.num_time_interval):
-            # wrong
             x_sample[:, :, i + 1] = x_sample[:, :, i] + \
             self.grad_v(x_sample[:, :, i])*self.delta_t + self.sigma * dw_sample[:, :, i]
 #            x_sample[:, :, i + 1] = x_sample[:, :, i] + \
@@ -93,12 +92,11 @@ class FokkerPlanckEigen(Equation):
         return dw_sample, x_sample    
     
     def true_y(self, x):
-        return tf.exp(-tf.cos(x[:,0]))
+        return tf.exp(-tf.cos(x[:,0:1]))
 #        return tf.exp(-self.v(self, x))
         
     def true_z(self, x):
-        shape = tf.shape(x)
-        x1 = tf.concat([tf.reshape(x[:,0],[shape[0],1]), tf.zeros(shape-[0, 1],tf.float64)], 1)
-        return tf.sin(x1) * tf.exp(-tf.cos(x1))
+        x1 = tf.concat([x[:,0:1],x[:,1:]*0], axis=1)
+        return tf.sin(x1) * tf.exp(-tf.cos(x1)) * self.sigma
 
     
