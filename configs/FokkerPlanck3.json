@@ -1,0 +1,19 @@
+{
+  "eqn_config": {
+    "eqn_name": "FokkerPlanck3Eigen",
+    "total_time": 0.09,
+    "dim": 2,
+    "num_time_interval": 40
+  },
+  "nn_config": {
+    "trig_order": 3,
+    "num_hiddens": [40, 40],
+    "lr_values": [1e-3, 1e-4, 1e-5],
+    "lr_boundaries": [4000, 6000],
+    "num_iterations": 8000,
+    "batch_size": 256,
+    "valid_size": 256,
+    "logging_frequency": 100,
+    "verbose": "True"
+  }
+}
