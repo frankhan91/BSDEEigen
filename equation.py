@@ -129,11 +129,58 @@ class FokkerPlanck2Eigen(Equation):
         return dw_sample, x_sample    
     
     def true_y(self, x):
-        return tf.exp(-tf.cos(x[:,0:1] + 2 * x[:,1:2])))
+        return tf.exp(-tf.cos(x[:,0:1] + 2 * x[:,1:2]))
         
     def true_z(self, x):
         temp = tf.sin(x[:,0:1] + 2 * x[:,1:2]) * tf.exp(-tf.cos(x[:,0:1] + 2 * x[:,1:2]))
         z = tf.concat([temp,2*temp],axis=1)
+        if self.dim > 2:
+            z = tf.concat([z, x[:,2:]*0],axis=1)
+        return z * self.sigma
+
+
+class FokkerPlanck3Eigen(Equation):
+    # eigenvalue problem for Fokker Planck operator on squares [0, 2pi]^d
+    # v(x) = cos(cos(x1) + 2*x2)
+    def __init__(self, eqn_config):
+        super(FokkerPlanck3Eigen, self).__init__(eqn_config)
+        self.sigma = np.sqrt(2.0)
+        
+    def v(self, x):
+        # the size of x is [num_sample, dim]
+        return tf.cos(tf.cos(x[:,0:1]) + 2 * x[:,1:2])
+    
+    def f_tf(self, x, y, z):
+        return y * (tf.cos(x[:,0:1]) * tf.sin(tf.cos(x[:,0:1]) + 2 * x[:,1:2]) - \
+                    ( 4 + tf.square(tf.sin(x[:,0:1])) ) * tf.cos(tf.cos(x[:,0:1]) + 2 * x[:,1:2]))
+#        return y * self.laplician_v(self, x)
+    
+    def grad_v(self, x):
+        temp = np.sin(np.cos(x[:,0:1]) + 2 * x[:,1:2])
+        grad = np.concatenate([np.sin(x[:,0:1])*temp,-2*temp],axis=1)
+        if self.dim > 2:
+            grad = np.concatenate([grad, x[:,2:]*0],axis=1)
+        return grad
+    
+    def sample(self, num_sample):
+        dw_sample = normal.rvs(size=[num_sample,
+                                     self.dim,
+                                     self.num_time_interval]) * self.sqrt_delta_t
+        x_sample = np.zeros([num_sample, self.dim, self.num_time_interval + 1])
+        #for now X_0 is uniformly sampled
+        x_sample[:, :, 0] = np.random.uniform(0.0, 2*np.pi, size=[num_sample, self.dim])
+        for i in range(self.num_time_interval):
+            x_sample[:, :, i + 1] = x_sample[:, :, i] + \
+            self.grad_v(x_sample[:, :, i])*self.delta_t + self.sigma * dw_sample[:, :, i]
+        return dw_sample, x_sample    
+    
+    def true_y(self, x):
+        return tf.exp(-tf.cos(tf.cos(x[:,0:1]) + 2 * x[:,1:2]))
+        
+    def true_z(self, x):
+        temp = tf.sin(tf.cos(x[:,0:1]) + 2 * x[:,1:2]) * \
+        tf.exp(-tf.cos(tf.cos(x[:,0:1]) + 2 * x[:,1:2]))
+        z = tf.concat([-tf.sin(x[:,0:1])*temp,2*temp],axis=1)
         if self.dim > 2:
             z = tf.concat([z, x[:,2:]*0],axis=1)
         return z * self.sigma
