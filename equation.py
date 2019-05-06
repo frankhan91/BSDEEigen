@@ -31,6 +31,7 @@ class LaplacianEigen(Equation):
     def __init__(self, eqn_config):
         super(LaplacianEigen, self).__init__(eqn_config)
         self.sigma = np.sqrt(2.0)
+        self.true_eigen = 0
 
     def sample(self, num_sample):
         dw_sample = normal.rvs(size=[num_sample,
@@ -60,6 +61,7 @@ class FokkerPlanckEigen(Equation):
     def __init__(self, eqn_config):
         super(FokkerPlanckEigen, self).__init__(eqn_config)
         self.sigma = np.sqrt(2.0)
+        self.true_eigen = 0
         
     def v(self, x):
         # the size of x is (num_sample, dim)
@@ -100,6 +102,7 @@ class FokkerPlanck2Eigen(Equation):
     def __init__(self, eqn_config):
         super(FokkerPlanck2Eigen, self).__init__(eqn_config)
         self.sigma = np.sqrt(2.0)
+        self.true_eigen = 0
         
     def v(self, x):
         # the size of x is [num_sample, dim]
@@ -145,6 +148,7 @@ class FokkerPlanck3Eigen(Equation):
     def __init__(self, eqn_config):
         super(FokkerPlanck3Eigen, self).__init__(eqn_config)
         self.sigma = np.sqrt(2.0)
+        self.true_eigen = 0
         
     def v(self, x):
         # the size of x is [num_sample, dim]
@@ -186,27 +190,59 @@ class FokkerPlanck3Eigen(Equation):
         return z * self.sigma
 
 
-class HarmonicOscillatorEigen(Equation):
-    # eigenvalue problem for Harmonic Oscillator
+class PotentialEigen(Equation):
+    # potential V(x)=cos(x1) on squares [0, 2pi]^d
     def __init__(self, eqn_config):
-        super(HarmonicOscillatorEigen, self).__init__(eqn_config)
+        super(PotentialEigen, self).__init__(eqn_config)
         self.sigma = np.sqrt(2.0)
+        self.true_eigen = -0.378489221264130
 
     def sample(self, num_sample):
         dw_sample = normal.rvs(size=[num_sample,
                                      self.dim,
                                      self.num_time_interval]) * self.sqrt_delta_t
         x_sample = np.zeros([num_sample, self.dim, self.num_time_interval + 1])
-        x_sample[:, :, 0] = np.random.normal(0.0, 1.0, size=[num_sample, self.dim])
+        x_sample[:, :, 0] = np.random.uniform(0.0, 2*np.pi, size=[num_sample, self.dim])
         for i in range(self.num_time_interval):
             x_sample[:, :, i + 1] = x_sample[:, :, i] + self.sigma * dw_sample[:, :, i]
         return dw_sample, x_sample
     
     def f_tf(self, x, y, z):
-        return -y * tf.reduce_sum(x ** 2, axis=1, keepdims=False)
-        
-    def true_z(self, x):
-        return -x * tf.exp(-0.5 * tf.reduce_sum(x ** 2, axis=1, keepdims=False))
+        return -tf.cos(x[:,0:1])*y
 
     def true_y(self, x):
-        return tf.exp(-0.5 * tf.reduce_sum(x ** 2, axis=1, keepdims=False))
+        coef = -tf.constant([-0.880348154038233, 0.666404574526491, -0.0765667378952856,\
+                0.00408869863723629, -0.000124894301350180, 2.46129968618575e-06,\
+                -3.38337623069477e-08, 3.42621149877335e-10, -2.66107082292485e-12], dtype=tf.float64)
+        N = 9
+        bases = []
+        for i in range(N):
+            bases += [tf.cos(i * x[:,0:1])]
+        bases = tf.concat(bases, axis=1)
+        return tf.reduce_sum(coef * bases, axis=1, keepdims=True)
+
+
+#class HarmonicOscillatorEigen(Equation):
+#    # eigenvalue problem for Harmonic Oscillator
+#    def __init__(self, eqn_config):
+#        super(HarmonicOscillatorEigen, self).__init__(eqn_config)
+#        self.sigma = np.sqrt(2.0)
+#
+#    def sample(self, num_sample):
+#        dw_sample = normal.rvs(size=[num_sample,
+#                                     self.dim,
+#                                     self.num_time_interval]) * self.sqrt_delta_t
+#        x_sample = np.zeros([num_sample, self.dim, self.num_time_interval + 1])
+#        x_sample[:, :, 0] = np.random.normal(0.0, 1.0, size=[num_sample, self.dim])
+#        for i in range(self.num_time_interval):
+#            x_sample[:, :, i + 1] = x_sample[:, :, i] + self.sigma * dw_sample[:, :, i]
+#        return dw_sample, x_sample
+#    
+#    def f_tf(self, x, y, z):
+#        return -y * tf.reduce_sum(x ** 2, axis=1, keepdims=False)
+#        
+#    def true_z(self, x):
+#        return -x * tf.exp(-0.5 * tf.reduce_sum(x ** 2, axis=1, keepdims=False))
+#
+#    def true_y(self, x):
+#        return tf.exp(-0.5 * tf.reduce_sum(x ** 2, axis=1, keepdims=False))
