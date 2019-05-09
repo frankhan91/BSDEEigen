@@ -40,15 +40,15 @@ class FeedForwardModel(object):
         # begin sgd iteration
         for step in range(self.nn_config.num_iterations+1):
             if step % self.nn_config.logging_frequency == 0:
-                train_loss, eigen_error, init_rel_loss, eigen, l2 = self.sess.run(
-                    [self.train_loss, self.eigen_error, self.init_rel_loss, self.eigen, self.l2],
+                train_loss, eigen_error, init_rel_loss, grad_error, l2 = self.sess.run(
+                    [self.train_loss, self.eigen_error, self.init_rel_loss, self.grad_error, self.l2],
                     feed_dict=feed_dict_valid)
                 elapsed_time = time.time()-start_time+self.t_build
-                training_history.append([step, train_loss, eigen_error, init_rel_loss, eigen, l2, elapsed_time])
+                training_history.append([step, train_loss, eigen_error, init_rel_loss, grad_error, l2, elapsed_time])
                 if self.nn_config.verbose:
                     logging.info(
-                        "step: %5u,    train_loss: %.4e,   eigen_error: %.4e, eigen: %.4e, l2: %.4e " % (
-                            step, train_loss, eigen_error, eigen, l2) +
+                        "step: %5u,    train_loss: %.4e,   eigen_error: %.4e, grad_error: %.4e, l2: %.4e " % (
+                            step, train_loss, eigen_error, grad_error, l2) +
                         "init_rel_loss: %.4e,   elapsed time %3u" % (
                          init_rel_loss, elapsed_time))
             dw_train, x_train = self.bsde.sample(self.nn_config.batch_size)
@@ -64,11 +64,14 @@ class FeedForwardModel(object):
             y_init = net_y(x_init)
             z = net_z(x_init)
             yl2 = tf.reduce_mean(y_init ** 2)
+            true_z = self.bsde.true_z(x_init)
+            error_z = z / tf.sqrt(tf.reduce_mean(z ** 2)) - true_z / tf.sqrt(tf.reduce_mean(true_z ** 2))
             # stop gradient
             # yl2 = tf.stop_gradient(yl2)
             sign = tf.sign(tf.reduce_sum(y_init))
             y_init = y_init / tf.sqrt(yl2) * sign
             y = y_init
+            
             for t in range(0, self.num_time_interval-1):
                 y = y - self.bsde.delta_t * (self.bsde.f_tf(self.x[:, :, t], y, z) + self.eigen *y) + \
                     tf.reduce_sum(z * self.dw[:, :, t], 1, keepdims=True)
@@ -86,15 +89,18 @@ class FeedForwardModel(object):
                          2 * DELTA_CLIP * tf.abs(delta) - DELTA_CLIP ** 2)) * 100 
                 # + tf.reduce_mean(tf.where(tf.abs(grad_y) < DELTA_CLIP, tf.square(grad_y), 2 * DELTA_CLIP * tf.abs(grad_y) - DELTA_CLIP ** 2))
         true_init = self.bsde.true_y(self.x[:, :, 0])
+        
         true_init = true_init / tf.sqrt(tf.reduce_mean(true_init ** 2))
 #        g = self.bsde.g_tf(self.x[:, :, 0])
         mask = tf.greater(tf.abs(true_init), 0.1)
         rel_err = tf.abs((y_init - true_init) / true_init)
         rel_err = tf.boolean_mask(rel_err, mask)
         
+        
         self.init_rel_loss = tf.reduce_mean(rel_err)
         self.eigen_error = self.eigen - self.bsde.true_eigen
         self.l2 = yl2
+        self.grad_error = tf.sqrt(tf.reduce_mean(error_z ** 2))
         
         # train operations
         global_step = tf.get_variable('global_step', [],
@@ -121,6 +127,7 @@ class FeedForwardModel(object):
             x_init = self.x[:, :, 0]
             #y_init = net_y(x_init)
             y_init = self.bsde.true_y(x_init)
+            yl2 = tf.reduce_mean(y_init ** 2)
             y = y_init
             z = self.bsde.true_z(x_init)
             #print(z)
@@ -149,8 +156,8 @@ class FeedForwardModel(object):
         rel_err = tf.boolean_mask(rel_err, mask)
         self.init_rel_loss = tf.reduce_mean(rel_err)
         self.eigen_error = self.eigen - self.bsde.true_eigen
-        self.l2 = tf.reduce_mean((y-1) ** 2)
-        
+        self.l2 = yl2
+        self.grad_error = tf.constant(0)
         
         # train operations
         global_step = tf.get_variable('global_step', [],
@@ -180,7 +187,7 @@ class PeriodNet(object):
         dim = x.get_shape()[-1]
         with tf.variable_scope(self.name):
             trig_bases = []
-            for i in range(dim):
+            for i in range(dim+1):
                 trig_bases += [tf.sin(i * x), tf.cos(i * x)]
             trig_bases = tf.concat(trig_bases, axis=1)
             h = trig_bases
