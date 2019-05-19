@@ -1,0 +1,19 @@
+{
+  "eqn_config": {
+    "eqn_name": "Schrodinger2Eigen",
+    "total_time": 0.05,
+    "dim": 10,
+    "num_time_interval": 160
+  },
+  "nn_config": {
+    "trig_order": 3,
+    "num_hiddens": [200, 200],
+    "lr_values": [1e-3, 1e-4, 1e-5],
+    "lr_boundaries": [20000, 21000],
+    "num_iterations": 22000,
+    "batch_size": 512,
+    "valid_size": 256,
+    "logging_frequency": 100,
+    "verbose": "True"
+  }
+}
