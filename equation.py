@@ -352,10 +352,13 @@ class Schrodinger2Eigen(Equation):
             flags = np.zeros(num_sample)
             while np.prod(flags) == 0:
                 for i in range(num_sample):
-                    p = #value of function
-                    if sample[i,j] < p
-                    x_sample[i, j, 0] = np.random.uniform(0.0, 2*np.pi)
-                    
+                    if flags[i] == 0:
+                        p = 0.5#value of function f(x_sample[i,j,0])
+                        if sample[i,j] < p:
+                            flags[i] = 1
+                        else:
+                            sample[i,j] = np.random.uniform(0.0, 1.0)
+                            x_sample[i, j, 0] = np.random.uniform(0.0, 2*np.pi)
         
         for i in range(self.num_time_interval):
             x_sample[:, :, i + 1] = x_sample[:, :, i] + self.sigma * dw_sample[:, :, i]
