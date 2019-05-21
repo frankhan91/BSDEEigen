@@ -309,7 +309,8 @@ class Schrodinger2Eigen(Equation):
         self.ci = [0.814723686393179,0.905791937075619,0.126986816293506,\
                    0.913375856139019,0.632359246225410,0.097540404999410,\
                    0.278498218867048,0.546881519204984,0.957506835434298,0.964888535199277]
-        
+        # supremum of each dimension's eigenfunction's absolute value
+        self.sup = [1.56400342750522,1.59706136953917,1.12365661150691,1.59964582497994,1.48429801251911,1.09574523792265,1.25645243657419,1.43922742759836,1.61421652060220,1.61657863431884]
         self.coef = [[0.904929598872363, 0.892479070097153, 0.996047011600309, 0.891473839010153, 0.931658124581625, 0.997649023058051, 0.982280529025825, 0.944649556846450, 0.885723649385784, 0.884778462161165],
                      [-0.599085866194182, -0.634418280724547, -0.125605497450144, -0.637155464900669, -0.512357488495517, -0.0969095482431325, -0.264889328009242, -0.462960196131467, -0.652506034959353, -0.654980719478657],
                      [0.0573984887007386, 0.0668213136994577, 0.00199001952859007, 0.0676069817707047, 0.0389137499036419, 0.00118025466788750, 0.00914049555158614, 0.0306829183857062, 0.0721762094875563, 0.0729397325313142],
@@ -333,32 +334,50 @@ class Schrodinger2Eigen(Equation):
                       [-2.70833285953644e-14, -6.52496184507332e-14, -2.25755087684351e-21, -6.98985664421818e-14, -3.19996713605594e-15, -2.11429074316866e-22, -2.51024844290998e-18, -9.23186269049210e-16, -1.03080851478047e-13, -1.09790440519160e-13]]
 
         self.true_eigen = -1.986050602989757
-               
+        
     def distribution(self, x):
         return np.ones(np.shape(x)) * 0.5
 
     
     def sample(self, num_sample):
+        N = 10
         dw_sample = normal.rvs(size=[num_sample,
                                      self.dim,
                                      self.num_time_interval]) * self.sqrt_delta_t
         x_sample = np.zeros([num_sample, self.dim, self.num_time_interval + 1])
         # uniform sampling is not a good idea
-        x_sample[:, :, 0] = np.random.uniform(0.0, 2*np.pi, size=[num_sample, self.dim])
-        sample = np.zeros([num_sample, self.dim])
-        sample = np.random.uniform(0.0, 1.0, size=[num_sample, self.dim])
-        # sample according to the true eigenfunction
+#        x_sample[:, :, 0] = np.random.uniform(0.0, 2*np.pi, size=[num_sample, self.dim])
+#        sample = np.zeros([num_sample, self.dim])
+#        sample = np.random.uniform(0.0, 1.0, size=[num_sample, self.dim])
+#        # sample according to the true eigenfunction
+#        for j in range(self.dim):
+#            flags = np.zeros(num_sample)
+#            while np.prod(flags) == 0:
+#                for i in range(num_sample):
+#                    if flags[i] == 0:
+#                        p = 0.5#value of function f(x_sample[i,j,0])
+#                        if sample[i,j] < p:
+#                            flags[i] = 1
+#                        else:
+#                            sample[i,j] = np.random.uniform(0.0, 1.0)
+#                            x_sample[i, j, 0] = np.random.uniform(0.0, 2*np.pi)
         for j in range(self.dim):
-            flags = np.zeros(num_sample)
-            while np.prod(flags) == 0:
-                for i in range(num_sample):
-                    if flags[i] == 0:
-                        p = 0.5#value of function f(x_sample[i,j,0])
-                        if sample[i,j] < p:
-                            flags[i] = 1
-                        else:
-                            sample[i,j] = np.random.uniform(0.0, 1.0)
-                            x_sample[i, j, 0] = np.random.uniform(0.0, 2*np.pi)
+            MCsample = []
+            #index = 0
+            while len(MCsample) < num_sample:
+                #index = index + 1
+                # each time add num_sample samples
+                x_smp = np.random.uniform(0.0, 2*np.pi, size=[num_sample])
+                #pdf = 0.5 #value of function f(x_smp)
+                bases_cos = 0 * x_smp
+                for m in range(N):
+                    bases_cos = bases_cos + np.cos(m * x_smp) * self.coef[m][j]
+                pdf = np.abs(bases_cos)
+                reject = np.random.uniform(0.0, self.sup[j], size=[num_sample])
+                x_smp = x_smp * (np.sign(pdf - reject) + 1) * 0.5
+                temp = x_smp[x_smp != 0]
+                MCsample.extend(temp)
+            x_sample[:, j, 0] = MCsample[0:num_sample]
         
         for i in range(self.num_time_interval):
             x_sample[:, :, i + 1] = x_sample[:, :, i] + self.sigma * dw_sample[:, :, i]
@@ -394,6 +413,7 @@ class Schrodinger3Eigen(Equation):
         self.sigma = np.sqrt(2.0)
         self.ci = [0.814723686393179,0.905791937075619,0.126986816293506,\
                    0.913375856139019,0.632359246225410]
+        self.sup = [1.56400342750522,1.59706136953917,1.12365661150691,1.59964582497994,1.48429801251911]
         
         self.coef = [[0.904929598872363, 0.892479070097153, 0.996047011600309, 0.891473839010153, 0.931658124581625],
                      [-0.599085866194182, -0.634418280724547, -0.125605497450144, -0.637155464900669, -0.512357488495517],
@@ -421,11 +441,27 @@ class Schrodinger3Eigen(Equation):
                
         
     def sample(self, num_sample):
+        N = 10
         dw_sample = normal.rvs(size=[num_sample,
                                      self.dim,
                                      self.num_time_interval]) * self.sqrt_delta_t
         x_sample = np.zeros([num_sample, self.dim, self.num_time_interval + 1])
-        x_sample[:, :, 0] = np.random.uniform(0.0, 2*np.pi, size=[num_sample, self.dim])
+        #x_sample[:, :, 0] = np.random.uniform(0.0, 2*np.pi, size=[num_sample, self.dim])
+        for j in range(self.dim):
+            MCsample = []
+            #index = 0
+            while len(MCsample) < num_sample:
+                # each time add num_sample samples
+                x_smp = np.random.uniform(0.0, 2*np.pi, size=[num_sample])
+                bases_cos = 0 * x_smp
+                for m in range(N):
+                    bases_cos = bases_cos + np.cos(m * x_smp) * self.coef[m][j]
+                pdf = np.abs(bases_cos) #value of function f(x_smp)
+                reject = np.random.uniform(0.0, self.sup[j], size=[num_sample])
+                x_smp = x_smp * (np.sign(pdf - reject) + 1) * 0.5
+                temp = x_smp[x_smp != 0]
+                MCsample.extend(temp)
+            x_sample[:, j, 0] = MCsample[0:num_sample]
         for i in range(self.num_time_interval):
             x_sample[:, :, i + 1] = x_sample[:, :, i] + self.sigma * dw_sample[:, :, i]
         return dw_sample, x_sample
