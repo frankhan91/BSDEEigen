@@ -14,6 +14,7 @@ class FeedForwardModel(object):
         self.nn_config = config.nn_config
         self.bsde = bsde
         self.sess = sess
+        self.y_init = None
         # make sure consistent with FBSDE equation
         self.dim = bsde.dim
         self.num_time_interval = bsde.num_time_interval
@@ -22,6 +23,8 @@ class FeedForwardModel(object):
         self.extra_train_ops = []
         self.dw = tf.placeholder(TF_DTYPE, [None, self.dim, self.num_time_interval], name='dW')
         self.x = tf.placeholder(TF_DTYPE, [None, self.dim, self.num_time_interval + 1], name='X')
+        self.x_input_fake = np.zeros(
+            shape=[self.nn_config.batch_size, self.dim, self.num_time_interval+1])
         self.train_loss, self.eigen_error, self.init_rel_loss,  self.l2 = None, None, None, None
         self.train_ops, self.t_build = None, None
         self.eigen = tf.get_variable('eigen', shape=[1], dtype=TF_DTYPE,
@@ -32,7 +35,7 @@ class FeedForwardModel(object):
         # to save iteration results
         training_history = []
         # for validation
-        dw_valid, x_valid = self.bsde.sample(self.nn_config.valid_size)
+        dw_valid, x_valid = self.bsde.sample_uniform(self.nn_config.valid_size)
         # can still use batch norm of samples in the validation phase
         feed_dict_valid = {self.dw: dw_valid, self.x: x_valid}
         # initialization
@@ -51,7 +54,9 @@ class FeedForwardModel(object):
                             step, train_loss, eigen_error, grad_error, l2) +
                         "init_rel_loss: %.4e,   elapsed time %3u" % (
                          init_rel_loss, elapsed_time))
-            dw_train, x_train = self.bsde.sample(self.nn_config.batch_size)
+            # use function for sampling, could be bsde.true_y_np or self.y_init_func
+            dw_train, x_train = self.bsde.sample_general_new(self.nn_config.batch_size,
+                                                             sample_func=self.y_init_func)
             self.sess.run(self.train_ops, feed_dict={self.dw: dw_train, self.x: x_train})
         return np.array(training_history)
 
@@ -70,6 +75,7 @@ class FeedForwardModel(object):
             # yl2 = tf.stop_gradient(yl2)
             sign = tf.sign(tf.reduce_sum(y_init))
             y_init = y_init / tf.sqrt(yl2) * sign
+            self.y_init = y_init
             y = y_init
             
             for t in range(0, self.num_time_interval-1):
@@ -127,6 +133,7 @@ class FeedForwardModel(object):
             x_init = self.x[:, :, 0]
             #y_init = net_y(x_init)
             y_init = self.bsde.true_y(x_init)
+            self.y_init = y_init
             yl2 = tf.reduce_mean(y_init ** 2)
             y = y_init
             z = self.bsde.true_z(x_init)
@@ -175,6 +182,10 @@ class FeedForwardModel(object):
         all_ops = [apply_op] + self.extra_train_ops
         self.train_ops = tf.group(*all_ops)
         self.t_build = time.time() - start_time
+
+    def y_init_func(self, x):
+        self.x_input_fake[:, :, 0] = x
+        return self.sess.run(self.y_init, feed_dict={self.x: self.x_input_fake})
 
 
 class PeriodNet(object):

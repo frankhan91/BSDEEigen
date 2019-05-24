@@ -13,7 +13,7 @@ class Equation(object):
         self.sqrt_delta_t = np.sqrt(self.delta_t)
         self.sigma = 1
 
-    def sample(self, num_sample):
+    def sample_uniform(self, num_sample):
         dw_sample = normal.rvs(size=[num_sample,
                                      self.dim,
                                      self.num_time_interval]) * self.sqrt_delta_t
@@ -234,9 +234,6 @@ class SchrodingerEigen(Equation):
         #self.true_eigen = -1.986050602989757
         self.true_eigen = -0.591624518674115
 
-    def sample(self, num_sample):
-        return self.sample_general_new(num_sample, self.true_y_np)
-
     def sample_general_new(self, num_sample, sample_func):
         dw_sample = normal.rvs(size=[num_sample,
                                      self.dim,
@@ -248,7 +245,7 @@ class SchrodingerEigen(Equation):
             pdf = np.abs(sample_func(x_smp))
             reject = 1
             for j in range(self.dim):
-                reject *= np.random.uniform(0.0, self.sup[j], size=[num_sample])
+                reject *= np.random.uniform(0.0, self.sup[j], size=[num_sample, 1])
             idx = np.nonzero(pdf > reject)
             MCsample = np.concatenate([MCsample, x_smp[idx[0], :]], axis=0)
         x_sample[:, :, 0] = MCsample[0:num_sample]
@@ -291,7 +288,7 @@ class SchrodingerEigen(Equation):
         bases_cos = 0 * x
         for m in range(self.N):
             bases_cos = bases_cos + np.cos(m * x) * self.coef[m]  # Broadcasting
-        return np.prod(bases_cos, axis=1, keepdims=False)
+        return np.prod(bases_cos, axis=1, keepdims=True)
 
     def true_y(self, x):
         bases_cos = 0 * x
