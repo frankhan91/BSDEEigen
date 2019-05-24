@@ -247,6 +247,7 @@ class SchrodingerEigen(Equation):
         self.ci = [0.814723686393179,0.905791937075619]
         #self.ci = [1,1]
         self.N = 10
+        self.sup = [1.56400342750522,1.59706136953917]
         self.coef = [[0.904929598872363, 0.892479070097153],
                      [-0.599085866194182, -0.634418280724547],
                      [0.0573984887007387, 0.0668213136994578],
@@ -272,11 +273,29 @@ class SchrodingerEigen(Equation):
         self.true_eigen = -0.591624518674115       
         
     def sample(self, num_sample):
+        N = 10
         dw_sample = normal.rvs(size=[num_sample,
                                      self.dim,
                                      self.num_time_interval]) * self.sqrt_delta_t
         x_sample = np.zeros([num_sample, self.dim, self.num_time_interval + 1])
-        x_sample[:, :, 0] = np.random.uniform(0.0, 2*np.pi, size=[num_sample, self.dim])
+        #x_sample[:, :, 0] = np.random.uniform(0.0, 2*np.pi, size=[num_sample, self.dim])
+        for j in range(self.dim):
+            MCsample = []
+            #index = 0
+            while len(MCsample) < num_sample:
+                #index = index + 1
+                # each time add num_sample samples
+                x_smp = np.random.uniform(0.0, 2*np.pi, size=[num_sample])
+                #pdf = 0.5 #value of function f(x_smp)
+                bases_cos = 0 * x_smp
+                for m in range(N):
+                    bases_cos = bases_cos + np.cos(m * x_smp) * self.coef[m][j]
+                pdf = np.abs(bases_cos)
+                reject = np.random.uniform(0.0, self.sup[j], size=[num_sample])
+                x_smp = x_smp * (np.sign(pdf - reject) + 1) * 0.5
+                temp = x_smp[x_smp != 0]
+                MCsample.extend(temp)
+            x_sample[:, j, 0] = MCsample[0:num_sample]
         for i in range(self.num_time_interval):
             x_sample[:, :, i + 1] = x_sample[:, :, i] + self.sigma * dw_sample[:, :, i]
         return dw_sample, x_sample
