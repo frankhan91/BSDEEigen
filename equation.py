@@ -11,10 +11,18 @@ class Equation(object):
         self.num_time_interval = eqn_config.num_time_interval
         self.delta_t = (self.total_time + 0.0) / self.num_time_interval
         self.sqrt_delta_t = np.sqrt(self.delta_t)
+        self.sigma = 1
 
     def sample(self, num_sample):
-        """Sample forward SDE."""
-        raise NotImplementedError
+        dw_sample = normal.rvs(size=[num_sample,
+                                     self.dim,
+                                     self.num_time_interval]) * self.sqrt_delta_t
+        x_sample = np.zeros([num_sample, self.dim, self.num_time_interval + 1])
+        # uniform X0
+        x_sample[:, :, 0] = np.random.uniform(0.0, 2*np.pi, size=[num_sample, self.dim])
+        for i in range(self.num_time_interval):
+            x_sample[:, :, i + 1] = x_sample[:, :, i] + self.sigma * dw_sample[:, :, i]
+        return dw_sample, x_sample
 
     def f_tf(self, x, y, z):
         """Generator function in the PDE."""
@@ -32,16 +40,6 @@ class LaplacianEigen(Equation):
         self.sigma = np.sqrt(2.0)
         self.true_eigen = 0
 
-    def sample(self, num_sample):
-        dw_sample = normal.rvs(size=[num_sample,
-                                     self.dim,
-                                     self.num_time_interval]) * self.sqrt_delta_t
-        x_sample = np.zeros([num_sample, self.dim, self.num_time_interval + 1])
-        x_sample[:, :, 0] = np.random.uniform(0.0, 2*np.pi, size=[num_sample, self.dim])
-        for i in range(self.num_time_interval):
-            x_sample[:, :, i + 1] = x_sample[:, :, i] + self.sigma * dw_sample[:, :, i]
-        return dw_sample, x_sample
-    
     def f_tf(self, x, y, z):
         shape = tf.shape(x)
         return tf.zeros(shape, tf.float64)
@@ -75,18 +73,6 @@ class FokkerPlanckEigen(Equation):
         return -y * tf.cos(x[:,0:1])
 #        return y * self.laplician_v(self, x)
 
-    def sample(self, num_sample):
-        dw_sample = normal.rvs(size=[num_sample,
-                                     self.dim,
-                                     self.num_time_interval]) * self.sqrt_delta_t
-        x_sample = np.zeros([num_sample, self.dim, self.num_time_interval + 1])
-        #for now X_0 is uniformly sampled
-        x_sample[:, :, 0] = np.random.uniform(0.0, 2*np.pi, size=[num_sample, self.dim])
-        for i in range(self.num_time_interval):
-            x_sample[:, :, i + 1] = x_sample[:, :, i] + \
-            self.grad_v(x_sample[:, :, i])*self.delta_t + self.sigma * dw_sample[:, :, i]
-        return dw_sample, x_sample    
-    
     def true_y(self, x):
         return tf.exp(-tf.cos(x[:,0:1]))
 #        return tf.exp(-self.v(self, x))
@@ -117,19 +103,7 @@ class FokkerPlanck2Eigen(Equation):
         if self.dim > 2:
             grad = np.concatenate([grad, x[:,2:]*0],axis=1)
         return grad
-    
-    def sample(self, num_sample):
-        dw_sample = normal.rvs(size=[num_sample,
-                                     self.dim,
-                                     self.num_time_interval]) * self.sqrt_delta_t
-        x_sample = np.zeros([num_sample, self.dim, self.num_time_interval + 1])
-        #for now X_0 is uniformly sampled
-        x_sample[:, :, 0] = np.random.uniform(0.0, 2*np.pi, size=[num_sample, self.dim])
-        for i in range(self.num_time_interval):
-            x_sample[:, :, i + 1] = x_sample[:, :, i] + \
-            self.grad_v(x_sample[:, :, i])*self.delta_t + self.sigma * dw_sample[:, :, i]
-        return dw_sample, x_sample    
-    
+
     def true_y(self, x):
         return tf.exp(-tf.cos(x[:,0:1] + 2 * x[:,1:2]))
         
@@ -164,19 +138,7 @@ class FokkerPlanck3Eigen(Equation):
         if self.dim > 2:
             grad = np.concatenate([grad, x[:,2:]*0],axis=1)
         return grad
-    
-    def sample(self, num_sample):
-        dw_sample = normal.rvs(size=[num_sample,
-                                     self.dim,
-                                     self.num_time_interval]) * self.sqrt_delta_t
-        x_sample = np.zeros([num_sample, self.dim, self.num_time_interval + 1])
-        #for now X_0 is uniformly sampled
-        x_sample[:, :, 0] = np.random.uniform(0.0, 2*np.pi, size=[num_sample, self.dim])
-        for i in range(self.num_time_interval):
-            x_sample[:, :, i + 1] = x_sample[:, :, i] + \
-            self.grad_v(x_sample[:, :, i])*self.delta_t + self.sigma * dw_sample[:, :, i]
-        return dw_sample, x_sample    
-    
+
     def true_y(self, x):
         return tf.exp(-tf.cos(tf.cos(x[:,0:1]) + 2 * x[:,1:2]))
         
@@ -270,15 +232,36 @@ class SchrodingerEigen(Equation):
                       [4.80286398171191e-12, 1.04144600573475e-11],
                       [-2.70833285953644e-14, -6.52496184507333e-14]]
         #self.true_eigen = -1.986050602989757
-        self.true_eigen = -0.591624518674115       
-        
+        self.true_eigen = -0.591624518674115
+
     def sample(self, num_sample):
+        return self.sample_general_new(num_sample, self.true_y_np)
+
+    def sample_general_new(self, num_sample, sample_func):
+        dw_sample = normal.rvs(size=[num_sample,
+                                     self.dim,
+                                     self.num_time_interval]) * self.sqrt_delta_t
+        x_sample = np.zeros([num_sample, self.dim, self.num_time_interval + 1])
+        MCsample = np.zeros(shape=[0, self.dim])
+        while MCsample.shape[0] < num_sample:
+            x_smp = np.random.uniform(0.0, 2*np.pi, size=[num_sample, self.dim])
+            pdf = np.abs(sample_func(x_smp))
+            reject = 1
+            for j in range(self.dim):
+                reject *= np.random.uniform(0.0, self.sup[j], size=[num_sample])
+            idx = np.nonzero(pdf > reject)
+            MCsample = np.concatenate([MCsample, x_smp[idx[0], :]], axis=0)
+        x_sample[:, :, 0] = MCsample[0:num_sample]
+        for i in range(self.num_time_interval):
+            x_sample[:, :, i + 1] = x_sample[:, :, i] + self.sigma * dw_sample[:, :, i]
+        return dw_sample, x_sample
+
+    def sample_general_old(self, num_sample):
         N = 10
         dw_sample = normal.rvs(size=[num_sample,
                                      self.dim,
                                      self.num_time_interval]) * self.sqrt_delta_t
         x_sample = np.zeros([num_sample, self.dim, self.num_time_interval + 1])
-        #x_sample[:, :, 0] = np.random.uniform(0.0, 2*np.pi, size=[num_sample, self.dim])
         for j in range(self.dim):
             MCsample = []
             #index = 0
@@ -302,7 +285,14 @@ class SchrodingerEigen(Equation):
     
     def f_tf(self, x, y, z):
         return -tf.reduce_sum(self.ci * tf.cos(x), axis=1, keepdims=True) *y
-       
+
+    def true_y_np(self, x):
+        # x in shape [num_sample, dim]
+        bases_cos = 0 * x
+        for m in range(self.N):
+            bases_cos = bases_cos + np.cos(m * x) * self.coef[m]  # Broadcasting
+        return np.prod(bases_cos, axis=1, keepdims=False)
+
     def true_y(self, x):
         bases_cos = 0 * x
         for m in range(self.N):
@@ -358,7 +348,7 @@ class Schrodinger2Eigen(Equation):
         return np.ones(np.shape(x)) * 0.5
 
     
-    def sample(self, num_sample):
+    def sample_general_old(self, num_sample):
         N = 10
         dw_sample = normal.rvs(size=[num_sample,
                                      self.dim,
@@ -459,7 +449,7 @@ class Schrodinger3Eigen(Equation):
         self.true_eigen = -1.099916247175464
                
         
-    def sample(self, num_sample):
+    def sample_general_old(self, num_sample):
         N = 10
         dw_sample = normal.rvs(size=[num_sample,
                                      self.dim,
@@ -538,17 +528,7 @@ class Schrodinger4Eigen(Equation):
 
         self.true_eigen = -0.269898883873185
                
-        
-    def sample(self, num_sample):
-        dw_sample = normal.rvs(size=[num_sample,
-                                     self.dim,
-                                     self.num_time_interval]) * self.sqrt_delta_t
-        x_sample = np.zeros([num_sample, self.dim, self.num_time_interval + 1])
-        x_sample[:, :, 0] = np.random.uniform(0.0, 2*np.pi, size=[num_sample, self.dim])
-        for i in range(self.num_time_interval):
-            x_sample[:, :, i + 1] = x_sample[:, :, i] + self.sigma * dw_sample[:, :, i]
-        return dw_sample, x_sample
-    
+
     def f_tf(self, x, y, z):
         return -tf.reduce_sum(self.ci * tf.cos(x), axis=1, keepdims=True) *y
        
