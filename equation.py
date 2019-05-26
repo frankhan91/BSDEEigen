@@ -24,6 +24,32 @@ class Equation(object):
             x_sample[:, :, i + 1] = x_sample[:, :, i] + self.sigma * dw_sample[:, :, i]
         return dw_sample, x_sample
 
+    def sample_general_new(self, num_sample, sample_func):
+        dw_sample = normal.rvs(size=[num_sample,
+                                     self.dim,
+                                     self.num_time_interval]) * self.sqrt_delta_t
+        x_sample = np.zeros([num_sample, self.dim, self.num_time_interval + 1])
+        MCsample = np.zeros(shape=[0, self.dim])
+        sup = 1
+        while MCsample.shape[0] < num_sample:
+            x_smp = np.random.uniform(0.0, 2*np.pi, size=[num_sample, self.dim])
+            pdf = np.abs(sample_func(x_smp))
+            reject = np.random.uniform(0.0, sup, size=[num_sample, 1])
+            idx = np.nonzero(pdf > reject)
+            sample_rate = len(idx[0]) / num_sample
+            if sample_rate > 0.8:
+                sup *= 2
+            elif sample_rate < 0.2:
+                sup *= 0.5
+                MCsample = np.concatenate([MCsample, x_smp[idx[0], :]], axis=0)
+            else:
+                MCsample = np.concatenate([MCsample, x_smp[idx[0], :]], axis=0)
+        x_sample[:, :, 0] = MCsample[0:num_sample]
+        for i in range(self.num_time_interval):
+            x_sample[:, :, i + 1] = x_sample[:, :, i] + self.sigma * dw_sample[:, :, i]
+        return dw_sample, x_sample
+    
+    
     def f_tf(self, x, y, z):
         """Generator function in the PDE."""
         raise NotImplementedError
@@ -203,11 +229,7 @@ class SchrodingerEigen(Equation):
     def __init__(self, eqn_config):
         super(SchrodingerEigen, self).__init__(eqn_config)
         self.sigma = np.sqrt(2.0)
-#        self.ci = [0.814723686393179,0.905791937075619,0.126986816293506,\
-#                   0.913375856139019,0.632359246225410,0.097540404999410,\
-#                   0.278498218867048,0.546881519204984,0.957506835434298,0.964888535199277]
         self.ci = [0.814723686393179,0.905791937075619]
-        #self.ci = [1,1]
         self.N = 10
         self.sup = [1.56400342750522,1.59706136953917]
         self.coef = [[0.904929598872363, 0.892479070097153],
@@ -231,44 +253,46 @@ class SchrodingerEigen(Equation):
                       [-6.63019558960889e-10, -1.29418171035271e-09],
                       [4.80286398171191e-12, 1.04144600573475e-11],
                       [-2.70833285953644e-14, -6.52496184507333e-14]]
-        #self.true_eigen = -1.986050602989757
         self.true_eigen = -0.591624518674115
 
-    def sample_general_new(self, num_sample, sample_func):
-        dw_sample = normal.rvs(size=[num_sample,
-                                     self.dim,
-                                     self.num_time_interval]) * self.sqrt_delta_t
-        x_sample = np.zeros([num_sample, self.dim, self.num_time_interval + 1])
-        MCsample = np.zeros(shape=[0, self.dim])
-        while MCsample.shape[0] < num_sample:
-            x_smp = np.random.uniform(0.0, 2*np.pi, size=[num_sample, self.dim])
-            pdf = np.abs(sample_func(x_smp))
-            reject = 1
-            for j in range(self.dim):
-                reject *= np.random.uniform(0.0, self.sup[j], size=[num_sample, 1])
-            idx = np.nonzero(pdf > reject)
-            MCsample = np.concatenate([MCsample, x_smp[idx[0], :]], axis=0)
-        x_sample[:, :, 0] = MCsample[0:num_sample]
-        for i in range(self.num_time_interval):
-            x_sample[:, :, i + 1] = x_sample[:, :, i] + self.sigma * dw_sample[:, :, i]
-        return dw_sample, x_sample
+#    def sample_general_new(self, num_sample, sample_func):
+#        dw_sample = normal.rvs(size=[num_sample,
+#                                     self.dim,
+#                                     self.num_time_interval]) * self.sqrt_delta_t
+#        x_sample = np.zeros([num_sample, self.dim, self.num_time_interval + 1])
+#        MCsample = np.zeros(shape=[0, self.dim])
+#        sup = 1
+#        while MCsample.shape[0] < num_sample:
+#            x_smp = np.random.uniform(0.0, 2*np.pi, size=[num_sample, self.dim])
+#            pdf = np.abs(sample_func(x_smp))
+#            reject = np.random.uniform(0.0, sup, size=[num_sample, 1])
+#            idx = np.nonzero(pdf > reject)
+#            sample_rate = len(idx[0]) / num_sample
+#            if sample_rate > 0.8:
+#                sup *= 2
+#            elif sample_rate < 0.2:
+#                sup *= 0.5
+#                MCsample = np.concatenate([MCsample, x_smp[idx[0], :]], axis=0)
+#            else:
+#                MCsample = np.concatenate([MCsample, x_smp[idx[0], :]], axis=0)
+#        x_sample[:, :, 0] = MCsample[0:num_sample]
+#        for i in range(self.num_time_interval):
+#            x_sample[:, :, i + 1] = x_sample[:, :, i] + self.sigma * dw_sample[:, :, i]
+#        return dw_sample, x_sample
 
     def sample_general_old(self, num_sample):
-        N = 10
         dw_sample = normal.rvs(size=[num_sample,
                                      self.dim,
                                      self.num_time_interval]) * self.sqrt_delta_t
         x_sample = np.zeros([num_sample, self.dim, self.num_time_interval + 1])
         for j in range(self.dim):
             MCsample = []
-            #index = 0
             while len(MCsample) < num_sample:
-                #index = index + 1
                 # each time add num_sample samples
                 x_smp = np.random.uniform(0.0, 2*np.pi, size=[num_sample])
                 #pdf = 0.5 #value of function f(x_smp)
                 bases_cos = 0 * x_smp
-                for m in range(N):
+                for m in range(self.N):
                     bases_cos = bases_cos + np.cos(m * x_smp) * self.coef[m][j]
                 pdf = np.abs(bases_cos)
                 reject = np.random.uniform(0.0, self.sup[j], size=[num_sample])
@@ -312,6 +336,7 @@ class Schrodinger2Eigen(Equation):
     def __init__(self, eqn_config):
         super(Schrodinger2Eigen, self).__init__(eqn_config)
         self.sigma = np.sqrt(2.0)
+        self.N = 10
         self.ci = [0.814723686393179,0.905791937075619,0.126986816293506,\
                    0.913375856139019,0.632359246225410,0.097540404999410,\
                    0.278498218867048,0.546881519204984,0.957506835434298,0.964888535199277]
@@ -338,45 +363,20 @@ class Schrodinger2Eigen(Equation):
                       [-6.63019558960889e-10, -1.29418171035270e-09, -2.25869593961810e-15, -1.36363176397323e-09, -1.29690240424437e-10, -3.58492576362679e-16, -5.22483803650272e-13, -4.99701519946585e-11, -1.83121088733948e-09, -1.92091370112439e-09],
                       [4.80286398171191e-12, 1.04144600573474e-11, 2.56044592923117e-18, 1.10644482840325e-11, 7.30261912535125e-13, 3.12170879112745e-19, 1.29848844251335e-15, 2.43489283036871e-13, 1.55699494918698e-11, 1.64574355682767e-11],
                       [-2.70833285953644e-14, -6.52496184507332e-14, -2.25755087684351e-21, -6.98985664421818e-14, -3.19996713605594e-15, -2.11429074316866e-22, -2.51024844290998e-18, -9.23186269049210e-16, -1.03080851478047e-13, -1.09790440519160e-13]]
-
         self.true_eigen = -1.986050602989757
-        
-    def distribution(self, x):
-        return np.ones(np.shape(x)) * 0.5
-
     
     def sample_general_old(self, num_sample):
-        N = 10
         dw_sample = normal.rvs(size=[num_sample,
                                      self.dim,
                                      self.num_time_interval]) * self.sqrt_delta_t
         x_sample = np.zeros([num_sample, self.dim, self.num_time_interval + 1])
         # uniform sampling is not a good idea
-#        x_sample[:, :, 0] = np.random.uniform(0.0, 2*np.pi, size=[num_sample, self.dim])
-#        sample = np.zeros([num_sample, self.dim])
-#        sample = np.random.uniform(0.0, 1.0, size=[num_sample, self.dim])
-#        # sample according to the true eigenfunction
-#        for j in range(self.dim):
-#            flags = np.zeros(num_sample)
-#            while np.prod(flags) == 0:
-#                for i in range(num_sample):
-#                    if flags[i] == 0:
-#                        p = 0.5#value of function f(x_sample[i,j,0])
-#                        if sample[i,j] < p:
-#                            flags[i] = 1
-#                        else:
-#                            sample[i,j] = np.random.uniform(0.0, 1.0)
-#                            x_sample[i, j, 0] = np.random.uniform(0.0, 2*np.pi)
         for j in range(self.dim):
             MCsample = []
-            #index = 0
             while len(MCsample) < num_sample:
-                #index = index + 1
-                # each time add num_sample samples
                 x_smp = np.random.uniform(0.0, 2*np.pi, size=[num_sample])
-                #pdf = 0.5 #value of function f(x_smp)
                 bases_cos = 0 * x_smp
-                for m in range(N):
+                for m in range(self.N):
                     bases_cos = bases_cos + np.cos(m * x_smp) * self.coef[m][j]
                 pdf = np.abs(bases_cos)
                 reject = np.random.uniform(0.0, self.sup[j], size=[num_sample])
@@ -392,35 +392,38 @@ class Schrodinger2Eigen(Equation):
     def f_tf(self, x, y, z):
         return -tf.reduce_sum(self.ci * tf.cos(x), axis=1, keepdims=True) *y
        
-    def true_y(self, x):
-        N = 10
+    def true_y_np(self,x):
         bases_cos = 0 * x
-        for m in range(N):
+        for m in range(self.N):
+            bases_cos = bases_cos + np.cos(m * x) * self.coef[m]  # Broadcasting
+        return np.prod(bases_cos, axis=1, keepdims=True)
+    
+    def true_y(self, x):
+        bases_cos = 0 * x
+        for m in range(self.N):
             bases_cos = bases_cos + tf.cos(m * x) * self.coef[m] #Broadcasting
         return tf.reduce_prod(bases_cos, axis=1, keepdims=True)
     
     def true_z(self, x):
-        N = 10
         bases_cos = 0
-        for m in range(N):
+        for m in range(self.N):
             bases_cos = bases_cos + tf.cos(m * x) * self.coef[m] #Broadcasting
         bases_sin = 0
-        for m in range(N):
+        for m in range(self.N):
             bases_sin = bases_sin + tf.sin(m * x) * self.coef2[m] #Broadcasting
         y = tf.reduce_prod(bases_cos, axis=1, keepdims=True)
         return - y * bases_sin / bases_cos * self.sigma
-
 
 
 class Schrodinger3Eigen(Equation):
     # Schrodinger V(x)= \sum_{i=1}^d ci*cos(xi) on squares [0, 2pi]^d
     def __init__(self, eqn_config):
         super(Schrodinger3Eigen, self).__init__(eqn_config)
+        self.N = 10
         self.sigma = np.sqrt(2.0)
         self.ci = [0.814723686393179,0.905791937075619,0.126986816293506,\
                    0.913375856139019,0.632359246225410]
         self.sup = [1.56400342750522,1.59706136953917,1.12365661150691,1.59964582497994,1.48429801251911]
-        
         self.coef = [[0.904929598872363, 0.892479070097153, 0.996047011600309, 0.891473839010153, 0.931658124581625],
                      [-0.599085866194182, -0.634418280724547, -0.125605497450144, -0.637155464900669, -0.512357488495517],
                      [0.0573984887007386, 0.0668213136994577, 0.00199001952859007, 0.0676069817707047, 0.0389137499036419],
@@ -431,7 +434,6 @@ class Schrodinger3Eigen(Equation):
                      [-9.47170798515556e-11, -1.84883101478958e-10, -3.22670848516871e-16, -1.94804537710462e-10, -1.85271772034910e-11],
                      [6.00357997713989e-13, 1.30180750716843e-12, 3.20055741153896e-19, 1.38305603550407e-12, 9.12827390668906e-14],
                      [-3.00925873281827e-15, -7.24995760563703e-15, -2.50838986315946e-22, -7.76650738246465e-15, -3.55551904006216e-16]]
-
         self.coef2 = [[0, 0, 0, 0, 0],
                       [-0.599085866194182, -0.634418280724547, -0.125605497450144, -0.637155464900669, -0.512357488495517],
                       [0.114796977401477, 0.133642627398915, 0.00398003905718015, 0.135213963541409, 0.0778274998072837],
@@ -442,7 +444,6 @@ class Schrodinger3Eigen(Equation):
                       [-6.63019558960889e-10, -1.29418171035270e-09, -2.25869593961810e-15, -1.36363176397323e-09, -1.29690240424437e-10],
                       [4.80286398171191e-12, 1.04144600573474e-11, 2.56044592923117e-18, 1.10644482840325e-11, 7.30261912535125e-13],
                       [-2.70833285953644e-14, -6.52496184507332e-14, -2.25755087684351e-21, -6.98985664421818e-14, -3.19996713605594e-15]]
-
         self.true_eigen = -1.099916247175464
                
         
@@ -455,7 +456,6 @@ class Schrodinger3Eigen(Equation):
         #x_sample[:, :, 0] = np.random.uniform(0.0, 2*np.pi, size=[num_sample, self.dim])
         for j in range(self.dim):
             MCsample = []
-            #index = 0
             while len(MCsample) < num_sample:
                 # each time add num_sample samples
                 x_smp = np.random.uniform(0.0, 2*np.pi, size=[num_sample])
@@ -475,6 +475,12 @@ class Schrodinger3Eigen(Equation):
     def f_tf(self, x, y, z):
         return -tf.reduce_sum(self.ci * tf.cos(x), axis=1, keepdims=True) *y
        
+    def true_y_np(self,x):
+        bases_cos = 0 * x
+        for m in range(self.N):
+            bases_cos = bases_cos + np.cos(m * x) * self.coef[m]  # Broadcasting
+        return np.prod(bases_cos, axis=1, keepdims=True)
+    
     def true_y(self, x):
         N = 10
         bases_cos = 0 * x
