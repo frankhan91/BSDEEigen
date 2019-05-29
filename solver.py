@@ -28,7 +28,7 @@ class FeedForwardModel(object):
         self.train_loss, self.eigen_error, self.init_rel_loss, self.NN_consist, self.l2 = None, None, None, None, None
         self.train_ops, self.t_build = None, None
         self.eigen = tf.get_variable('eigen', shape=[1], dtype=TF_DTYPE,
-                                     initializer=tf.random_uniform_initializer(-0.60, -0.59), trainable=True)
+                                     initializer=tf.random_uniform_initializer(-2.0, -1.9), trainable=True)
 
     def train(self):
         start_time = time.time()
@@ -55,8 +55,10 @@ class FeedForwardModel(object):
                         "init_rel_loss: %.4e,   elapsed time %3u" % (
                          init_rel_loss, elapsed_time))
             # use function for sampling, could be bsde.true_y_np or self.y_init_func
-            dw_train, x_train = self.bsde.sample_general_new(self.nn_config.batch_size,
-                                                             sample_func=self.y_init_func)
+            #dw_train, x_train = self.bsde.sample_general_new(self.nn_config.batch_size,
+            #                                                 sample_func=self.y_init_func)
+            #dw_train, x_train = self.bsde.sample_uniform(self.nn_config.batch_size)
+            dw_train, x_train = self.bsde.sample_general_old(self.nn_config.batch_size)
             self.sess.run(self.train_ops, feed_dict={self.dw: dw_train, self.x: x_train})
         return np.array(training_history)
 
@@ -76,8 +78,8 @@ class FeedForwardModel(object):
             normed_true_z = true_z / tf.sqrt(tf.reduce_mean(true_z ** 2))
             error_z = z / tf.sqrt(tf.reduce_mean(z ** 2)) - normed_true_z
             y_init = y_init / tf.sqrt(yl2) * sign
-            NN_consist = z - grad_y / tf.sqrt(yl2) * sign
-            #NN_consist = grad_y * sign /tf.sqrt(tf.reduce_mean(grad_y ** 2)) - normed_true_z
+            #NN_consist = z - grad_y / tf.sqrt(yl2) * sign
+            NN_consist = grad_y * sign /tf.sqrt(tf.reduce_mean(grad_y ** 2)) - normed_true_z
             self.y_init = y_init
             y = y_init
             
@@ -206,6 +208,12 @@ class PeriodNet(object):
             for i in range(0, len(self.num_hiddens)):
                 h = tf.layers.dense(h, self.num_hiddens[i], activation=tf.nn.relu,
                                     name="full%g" % (i + 1), reuse=reuse)
+#                res = tf.layers.dense(h, self.num_hiddens[i], activation=tf.nn.relu,
+#                                    name="full%g" % (i + 1), reuse=reuse)
+#                if i == 0:
+#                    h = res
+#                else:
+#                    h += res
             u = tf.layers.dense(
                 h, self.out_dim, activation=None, name="final_layer", reuse=reuse)
             if need_grad:
