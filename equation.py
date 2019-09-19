@@ -830,8 +830,8 @@ class Schrodinger7Eigen(Equation):
         
     def GradientLnPhi(self, x):
         # Phi is square of self.true_y_np
-        #return 2 * self.true_z(x) / self.true_y(x)
-        #return 2 * self.true_z_np(x) / self.true_y_np(x)
+        #return 2 * self.true_z(x)/self.sigma / self.true_y(x)
+        #return 2 * self.true_z_np(x)/self.sigma / self.true_y_np(x)
         bases_cos = 0*x
         for m in range(self.N):
             bases_cos = bases_cos + np.cos(m * x) * self.coef[m] #Broadcasting
@@ -855,7 +855,7 @@ class Schrodinger7Eigen(Equation):
                 bases_cos = 0 * x_smp
                 for m in range(self.N):
                     bases_cos = bases_cos + np.cos(m * x_smp) * self.coef[m][j]
-                pdf = np.abs(bases_cos)
+                pdf = np.square(bases_cos)
                 reject = np.random.uniform(0.0, self.sup[j], size=[num_sample])
                 x_smp = x_smp * (np.sign(pdf - reject) + 1) * 0.5
                 temp = x_smp[x_smp != 0]
