@@ -804,7 +804,7 @@ class Schrodinger7Eigen(Equation):
         self.h = 0.001;
         self.ci = [0.814723686393179,0.905791937075619]
         self.N = 10
-        self.sup = [1.56400342750522,1.59706136953917]
+        self.sup = [1.56400342750522 ** 2,1.59706136953917 ** 2]
         self.coef = [[0.904929598872363, 0.892479070097153],
                      [-0.599085866194182, -0.634418280724547],
                      [0.0573984887007387, 0.0668213136994578],
@@ -828,18 +828,21 @@ class Schrodinger7Eigen(Equation):
                       [-2.70833285953644e-14, -6.52496184507333e-14]]
         self.true_eigen = -0.591624518674115
         
-    def GradientLnPhi(self, x):
+    def GradientLnPhi_tf(self, x):
+        return 2 * self.true_z(x)/self.sigma / self.true_y(x)
+    
+    def GradientLnPhi_np(self, x):
         # Phi is square of self.true_y_np
         #return 2 * self.true_z(x)/self.sigma / self.true_y(x)
-        #return 2 * self.true_z_np(x)/self.sigma / self.true_y_np(x)
-        bases_cos = 0*x
-        for m in range(self.N):
-            bases_cos = bases_cos + np.cos(m * x) * self.coef[m] #Broadcasting
-        bases_sin = 0*x
-        for m in range(self.N):
-            bases_sin = bases_sin + np.sin(m * x) * self.coef2[m] #Broadcasting
-        y = np.prod(bases_cos, axis=1, keepdims=True)
-        return - y * bases_sin / (bases_cos ** 2)
+        return 2 * self.true_z_np(x)/self.sigma / self.true_y_np(x)
+#        bases_cos = 0*x
+#        for m in range(self.N):
+#            bases_cos = bases_cos + np.cos(m * x) * self.coef[m] #Broadcasting
+#        bases_sin = 0*x
+#        for m in range(self.N):
+#            bases_sin = bases_sin + np.sin(m * x) * self.coef2[m] #Broadcasting
+#        y = np.prod(bases_cos, axis=1, keepdims=True)
+#        return -2* bases_sin / bases_cos 
 
     def sample_general_old(self, num_sample):
         dw_sample = normal.rvs(size=[num_sample,
@@ -863,14 +866,15 @@ class Schrodinger7Eigen(Equation):
             x_sample[:, j, 0] = MCsample[0:num_sample]
         for i in range(self.num_time_interval):
             x_sample[:, :, i + 1] = x_sample[:, :, i] + self.delta_t*\
-            self.GradientLnPhi(x_sample[:, :, i]) + self.sigma * dw_sample[:, :, i]
+            self.GradientLnPhi_np(x_sample[:, :, i]) + self.sigma * dw_sample[:, :, i]
         return dw_sample, x_sample
     
     def f_tf(self, x, y, z):
         #shape = np.shape(x)
         #num_sample = shape[0]
-        temp = self.GradientLnPhi(x)
+        temp = self.GradientLnPhi_tf(x)
         return -tf.reduce_sum(temp * z, axis=1, keepdims=True) - tf.reduce_sum(self.ci * tf.cos(x), axis=1, keepdims=True) *y
+        #return - tf.reduce_sum(self.ci * tf.cos(x), axis=1, keepdims=True)
 
     def true_y_np(self, x):
         # x in shape [num_sample, dim]
