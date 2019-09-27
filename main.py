@@ -8,9 +8,9 @@ from utility import get_config, DictionaryUtility
 from solver import FeedForwardModel
 
 FLAGS = tf.app.flags.FLAGS
-tf.app.flags.DEFINE_string('config_path', './configs/Schrodinger.json',
+tf.app.flags.DEFINE_string('config_path', './configs/Schrodinger8.json',
                            """The path to load json file.""")
-tf.app.flags.DEFINE_string('exp_name', 'Schrodinger_test',
+tf.app.flags.DEFINE_string('exp_name', 'Schrodinger8invariant',
                            """The name of numerical experiments.""")
 tf.app.flags.DEFINE_integer('num_run', 1,
                             """The number of experiments to repeatedly run for the same problem.""")
@@ -21,6 +21,11 @@ tf.app.flags.DEFINE_string('log_dir', './logs',
 def main():
     config = get_config(FLAGS.config_path)
     bsde = getattr(eqn, config.eqn_config.eqn_name)(config.eqn_config)
+    dim = config.eqn_config.dim
+    T = config.eqn_config.total_time
+    i = config.eqn_config.num_time_interval
+    NN_size = config.nn_config.num_hiddens
+    l = len(NN_size)
 
     if not os.path.exists(FLAGS.log_dir):
         os.mkdir(FLAGS.log_dir)
@@ -38,11 +43,11 @@ def main():
             model.build()
             training_history = model.train()
             # save training history
-            np.savetxt('{}_log_{}.csv'.format(path_prefix, idx_run),
+            np.savetxt('{}_log_{}d,i{},T{},N{}x{}.csv'.format(path_prefix, dim,i,T,l,NN_size[0]),
                        training_history,
-                       fmt=['%d', '%.5e', '%.5e', '%.5e', '%.5e', '%.5e', '%d'],
+                       fmt=['%d', '%.5e', '%.5e', '%.5e', '%.5e', '%.5e', '%.5e', '%d'],
                        delimiter=",",
-                       header="step,train_loss, init_loss,init_rel_loss,eigen, l2, elapsed_time",
+                       header="step,train_loss, eigen_error, init_rel_loss, grad_error, NN_consist, l2, elapsed_time",
                        comments='')
 
 

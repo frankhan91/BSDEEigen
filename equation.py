@@ -729,120 +729,13 @@ class Schrodinger6Eigen(Equation):
                       [-2.70833285953644e-14, -6.52496184507332e-14, -2.25755087684351e-21, -6.98985664421818e-14, -3.19996713605594e-15]]
         self.true_eigen = -1.099916247175464
     
-    def true_y_np(self,x):
-        bases_cos = 0 * x
-        for m in range(self.N):
-            bases_cos = bases_cos + np.cos(m * x) * self.coef[m]  # Broadcasting
-        return np.prod(bases_cos, axis=1, keepdims=True)
-           
-    def GradientPhi(self, x):
-        # Phi is absolute value of self.true_y_np
-        temp = x*0
-        num_sample = np.shape(x)[0]
-        for i in range(self.dim):
-            e = np.zeros(self.dim)
-            e[i] = 1
-            temp[:,i] = np.reshape(np.abs(self.true_y_np(x + self.h*e)) - np.abs(self.true_y_np(x - self.h*e)),num_sample)
-        return temp /2 /self.h
-        
-    def sample_general_old(self, num_sample):
-        N = 10
-        dw_sample = normal.rvs(size=[num_sample,
-                                     self.dim,
-                                     self.num_time_interval]) * self.sqrt_delta_t
-        x_sample = np.zeros([num_sample, self.dim, self.num_time_interval + 1])
-        #x_sample[:, :, 0] = np.random.uniform(0.0, 2*np.pi, size=[num_sample, self.dim])
-        for j in range(self.dim):
-            MCsample = []
-            while len(MCsample) < num_sample:
-                # each time add num_sample samples
-                x_smp = np.random.uniform(0.0, 2*np.pi, size=[num_sample])
-                bases_cos = 0 * x_smp
-                for m in range(N):
-                    bases_cos = bases_cos + np.cos(m * x_smp) * self.coef[m][j]
-                pdf = np.abs(bases_cos) #value of function f(x_smp)
-                reject = np.random.uniform(0.0, self.sup[j], size=[num_sample])
-                x_smp = x_smp * (np.sign(pdf - reject) + 1) * 0.5
-                temp = x_smp[x_smp != 0]
-                MCsample.extend(temp)
-            x_sample[:, j, 0] = MCsample[0:num_sample]
-        for i in range(self.num_time_interval):
-            x_sample[:, :, i + 1] = x_sample[:, :, i] - self.delta_t*\
-            self.GradientPhi(x_sample[:, :, i])/np.reshape(np.abs(self.true_y_np(x_sample[:, :, i])),(num_sample,1))\
-            + self.sigma * dw_sample[:, :, i]
-        return dw_sample, x_sample
-    
-    def f_tf(self, x, y, z):
-        return -tf.reduce_sum(self.ci * tf.cos(x), axis=1, keepdims=True) *y
-       
-    def true_y(self, x):
-        N = 10
-        bases_cos = 0 * x
-        for m in range(N):
-            bases_cos = bases_cos + tf.cos(m * x) * self.coef[m] #Broadcasting
-        return tf.reduce_prod(bases_cos, axis=1, keepdims=True)
-    
-    def true_z(self, x):
-        N = 10
-        bases_cos = 0
-        for m in range(N):
-            bases_cos = bases_cos + tf.cos(m * x) * self.coef[m] #Broadcasting
-        bases_sin = 0
-        for m in range(N):
-            bases_sin = bases_sin + tf.sin(m * x) * self.coef2[m] #Broadcasting
-        y = tf.reduce_prod(bases_cos, axis=1, keepdims=True)
-        return - y * bases_sin / bases_cos * self.sigma
-
-
-class Schrodinger7Eigen(Equation):
-    # Schrodinger V(x)= \sum_{i=1}^d ci*cos(xi) on squares [0, 2pi]^d
-    # same as Schrodinger, but we use invariant measure to sample
-    def __init__(self, eqn_config):
-        super(Schrodinger7Eigen, self).__init__(eqn_config)
-        self.dim = eqn_config.dim
-        self.sigma = np.sqrt(2.0)
-        self.h = 0.001;
-        self.ci = [0.814723686393179,0.905791937075619]
-        self.N = 10
-        self.sup = [1.56400342750522 ** 2,1.59706136953917 ** 2]
-        self.coef = [[0.904929598872363, 0.892479070097153],
-                     [-0.599085866194182, -0.634418280724547],
-                     [0.0573984887007387, 0.0668213136994578],
-                     [-0.00252519085534048, -0.00325082263430659],
-                     [6.32514967687960e-05, 9.02475797129487e-05],
-                     [-1.01983519526066e-06, -1.61448458844806e-06],
-                     [1.14553116486126e-08, 2.01332109031048e-08],
-                     [-9.47170798515555e-11, -1.84883101478958e-10],
-                     [6.00357997713989e-13, 1.30180750716843e-12],
-                     [-3.00925873281827e-15, -7.24995760563704e-15]]
-        
-        self.coef2 = [[0, 0],
-                      [-0.599085866194182, -0.634418280724547],
-                      [0.114796977401477, 0.133642627398916],
-                      [-0.00757557256602144, -0.00975246790291976],
-                      [0.000253005987075184, 0.000360990318851795],
-                      [-5.09917597630331e-06, -8.07242294224032e-06],
-                      [6.87318698916753e-08, 1.20799265418629e-07],
-                      [-6.63019558960889e-10, -1.29418171035271e-09],
-                      [4.80286398171191e-12, 1.04144600573475e-11],
-                      [-2.70833285953644e-14, -6.52496184507333e-14]]
-        self.true_eigen = -0.591624518674115
-        
     def GradientLnPhi_tf(self, x):
         return 2 * self.true_z(x)/self.sigma / self.true_y(x)
     
     def GradientLnPhi_np(self, x):
         # Phi is square of self.true_y_np
-        #return 2 * self.true_z(x)/self.sigma / self.true_y(x)
         return 2 * self.true_z_np(x)/self.sigma / self.true_y_np(x)
-#        bases_cos = 0*x
-#        for m in range(self.N):
-#            bases_cos = bases_cos + np.cos(m * x) * self.coef[m] #Broadcasting
-#        bases_sin = 0*x
-#        for m in range(self.N):
-#            bases_sin = bases_sin + np.sin(m * x) * self.coef2[m] #Broadcasting
-#        y = np.prod(bases_cos, axis=1, keepdims=True)
-#        return -2* bases_sin / bases_cos 
+ 
 
     def sample_general_old(self, num_sample):
         dw_sample = normal.rvs(size=[num_sample,
@@ -873,7 +766,7 @@ class Schrodinger7Eigen(Equation):
         #shape = np.shape(x)
         #num_sample = shape[0]
         temp = self.GradientLnPhi_tf(x)
-        return -tf.reduce_sum(temp * z, axis=1, keepdims=True) - tf.reduce_sum(self.ci * tf.cos(x), axis=1, keepdims=True) *y
+        return -tf.reduce_sum(temp * z / self.sigma, axis=1, keepdims=True) - tf.reduce_sum(self.ci * tf.cos(x), axis=1, keepdims=True) *y
         #return - tf.reduce_sum(self.ci * tf.cos(x), axis=1, keepdims=True)
 
     def true_y_np(self, x):
@@ -908,6 +801,223 @@ class Schrodinger7Eigen(Equation):
             bases_sin = bases_sin + tf.sin(m * x) * self.coef2[m] #Broadcasting
         y = tf.reduce_prod(bases_cos, axis=1, keepdims=True)
         return - y * bases_sin / bases_cos * self.sigma
+
+
+class Schrodinger7Eigen(Equation):
+    # Schrodinger V(x)= \sum_{i=1}^d ci*cos(xi) on squares [0, 2pi]^d
+    # same as Schrodinger, but we use invariant measure to sample
+    def __init__(self, eqn_config):
+        super(Schrodinger7Eigen, self).__init__(eqn_config)
+        self.sigma = np.sqrt(2.0)
+        self.ci = [0.814723686393179,0.905791937075619]
+        self.N = 10
+        self.sup = [1.56400342750522 ** 2,1.59706136953917 ** 2]
+        self.coef = [[0.904929598872363, 0.892479070097153],
+                     [-0.599085866194182, -0.634418280724547],
+                     [0.0573984887007387, 0.0668213136994578],
+                     [-0.00252519085534048, -0.00325082263430659],
+                     [6.32514967687960e-05, 9.02475797129487e-05],
+                     [-1.01983519526066e-06, -1.61448458844806e-06],
+                     [1.14553116486126e-08, 2.01332109031048e-08],
+                     [-9.47170798515555e-11, -1.84883101478958e-10],
+                     [6.00357997713989e-13, 1.30180750716843e-12],
+                     [-3.00925873281827e-15, -7.24995760563704e-15]]
+        
+        self.coef2 = [[0, 0],
+                      [-0.599085866194182, -0.634418280724547],
+                      [0.114796977401477, 0.133642627398916],
+                      [-0.00757557256602144, -0.00975246790291976],
+                      [0.000253005987075184, 0.000360990318851795],
+                      [-5.09917597630331e-06, -8.07242294224032e-06],
+                      [6.87318698916753e-08, 1.20799265418629e-07],
+                      [-6.63019558960889e-10, -1.29418171035271e-09],
+                      [4.80286398171191e-12, 1.04144600573475e-11],
+                      [-2.70833285953644e-14, -6.52496184507333e-14]]
+        self.true_eigen = -0.591624518674115
+        
+    def GradientLnPhi_tf(self, x):
+        return 2 * self.true_z(x)/self.sigma / self.true_y(x)
+    
+    def GradientLnPhi_np(self, x):
+        # Phi is square of self.true_y_np
+        return 2 * self.true_z_np(x)/self.sigma / self.true_y_np(x)
+ 
+
+    def sample_general_old(self, num_sample):
+        dw_sample = normal.rvs(size=[num_sample,
+                                     self.dim,
+                                     self.num_time_interval]) * self.sqrt_delta_t
+        x_sample = np.zeros([num_sample, self.dim, self.num_time_interval + 1])
+        for j in range(self.dim):
+            MCsample = []
+            while len(MCsample) < num_sample:
+                # each time add num_sample samples
+                x_smp = np.random.uniform(0.0, 2*np.pi, size=[num_sample])
+                #pdf = 0.5 #value of function f(x_smp)
+                bases_cos = 0 * x_smp
+                for m in range(self.N):
+                    bases_cos = bases_cos + np.cos(m * x_smp) * self.coef[m][j]
+                pdf = np.square(bases_cos)
+                reject = np.random.uniform(0.0, self.sup[j], size=[num_sample])
+                x_smp = x_smp * (np.sign(pdf - reject) + 1) * 0.5
+                temp = x_smp[x_smp != 0]
+                MCsample.extend(temp)
+            x_sample[:, j, 0] = MCsample[0:num_sample]
+        for i in range(self.num_time_interval):
+            x_sample[:, :, i + 1] = x_sample[:, :, i] + self.delta_t*\
+            self.GradientLnPhi_np(x_sample[:, :, i]) + self.sigma * dw_sample[:, :, i]
+        return dw_sample, x_sample
+    
+    def f_tf(self, x, y, z):
+        #shape = np.shape(x)
+        #num_sample = shape[0]
+        temp = self.GradientLnPhi_tf(x)
+        return -tf.reduce_sum(temp * z / self.sigma, axis=1, keepdims=True) - tf.reduce_sum(self.ci * tf.cos(x), axis=1, keepdims=True) *y
+        #return - tf.reduce_sum(self.ci * tf.cos(x), axis=1, keepdims=True)
+
+    def true_y_np(self, x):
+        # x in shape [num_sample, dim]
+        bases_cos = 0 * x
+        for m in range(self.N):
+            bases_cos = bases_cos + np.cos(m * x) * self.coef[m]  # Broadcasting
+        return np.prod(bases_cos, axis=1, keepdims=True)
+
+    def true_z_np(self, x):
+        bases_cos = 0
+        for m in range(self.N):
+            bases_cos = bases_cos + np.cos(m * x) * self.coef[m] #Broadcasting
+        bases_sin = 0
+        for m in range(self.N):
+            bases_sin = bases_sin + np.sin(m * x) * self.coef2[m] #Broadcasting
+        y = np.prod(bases_cos, axis=1, keepdims=True)
+        return - y * bases_sin / bases_cos * self.sigma
+    
+    def true_y(self, x):
+        bases_cos = 0 * x
+        for m in range(self.N):
+            bases_cos = bases_cos + tf.cos(m * x) * self.coef[m] #Broadcasting
+        return tf.reduce_prod(bases_cos, axis=1, keepdims=True)
+    
+    def true_z(self, x):
+        bases_cos = 0
+        for m in range(self.N):
+            bases_cos = bases_cos + tf.cos(m * x) * self.coef[m] #Broadcasting
+        bases_sin = 0
+        for m in range(self.N):
+            bases_sin = bases_sin + tf.sin(m * x) * self.coef2[m] #Broadcasting
+        y = tf.reduce_prod(bases_cos, axis=1, keepdims=True)
+        return - y * bases_sin / bases_cos * self.sigma
+
+
+class Schrodinger8Eigen(Equation):
+    # Schrodinger V(x)= \sum_{i=1}^d ci*cos(xi) on squares [0, 2pi]^d
+    # same as Schrodinger, but we use invariant measure to sample
+    def __init__(self, eqn_config):
+        super(Schrodinger8Eigen, self).__init__(eqn_config)
+        self.sigma = np.sqrt(2.0)
+        self.N = 10
+        self.ci = [0.814723686393179 ** 2,0.905791937075619 ** 2,0.126986816293506 ** 2,\
+                   0.913375856139019 ** 2,0.632359246225410 ** 2,0.097540404999410 ** 2,\
+                   0.278498218867048 ** 2,0.546881519204984 ** 2,0.957506835434298 ** 2,0.964888535199277 ** 2]
+        # supremum of each dimension's eigenfunction's absolute value
+        self.sup = [1.56400342750522,1.59706136953917,1.12365661150691,1.59964582497994,1.48429801251911,1.09574523792265,1.25645243657419,1.43922742759836,1.61421652060220,1.61657863431884]
+        self.coef = [[0.904929598872363, 0.892479070097153, 0.996047011600309, 0.891473839010153, 0.931658124581625, 0.997649023058051, 0.982280529025825, 0.944649556846450, 0.885723649385784, 0.884778462161165],
+                     [-0.599085866194182, -0.634418280724547, -0.125605497450144, -0.637155464900669, -0.512357488495517, -0.0969095482431325, -0.264889328009242, -0.462960196131467, -0.652506034959353, -0.654980719478657],
+                     [0.0573984887007386, 0.0668213136994577, 0.00199001952859007, 0.0676069817707047, 0.0389137499036419, 0.00118025466788750, 0.00914049555158614, 0.0306829183857062, 0.0721762094875563, 0.0729397325313142],
+                     [-0.00252519085534048, -0.00325082263430658, -1.40271491734589e-05, -0.00331506767448259, -0.00134207463713329, -6.39243615673157e-06, -0.000140854107058429, -0.000919007154831146, -0.00370016361849726, -0.00376642561780699],
+                     [6.32514967687960e-05, 9.02475797129485e-05, 5.56371876669565e-08, 9.27770452504068e-05, 2.62423654134247e-05, 1.94793735338997e-08, 1.22305183605055e-06, 1.55782949374877e-05, 0.000108388631038444, 0.000111150892928655],
+                     [-1.01983519526066e-06, -1.61448458844806e-06, -1.41256489759314e-10, -1.67334312048648e-06, -3.29635802399548e-07, -3.79928584585742e-11, -6.80228425921455e-09, -1.69495102259451e-07, -2.04729080278141e-06, -2.11528784557100e-06],
+                     [1.14553116486126e-08, 2.01332109031047e-08, 2.49070180873992e-13, 2.10393672744256e-08, 2.88136027661028e-09, 5.14616943511569e-14, 2.62845162481860e-11, 1.28269245292752e-09, 2.69656139309183e-08, 2.80726379468963e-08],
+                     [-9.47170798515556e-11, -1.84883101478958e-10, -3.22670848516871e-16, -1.94804537710462e-10, -1.85271772034910e-11, -5.12132251946685e-17, -7.46405433786103e-14, -7.13859314209407e-12, -2.61601555334212e-10, -2.74416243017770e-10],
+                     [6.00357997713989e-13, 1.30180750716843e-12, 3.20055741153896e-19, 1.38305603550407e-12, 9.12827390668906e-14, 3.90213598890932e-20, 1.62311055314169e-16, 3.04361603796089e-14, 1.94624368648372e-12, 2.05717944603459e-12],
+                     [-3.00925873281827e-15, -7.24995760563703e-15, -2.50838986315946e-22, -7.76650738246465e-15, -3.55551904006216e-16, -2.34921193685406e-23, -2.78916493656665e-19, -1.02576252116579e-16, -1.14534279420053e-14, -1.21989378354622e-14]]
+
+        self.coef2 = [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                      [-0.599085866194182, -0.634418280724547, -0.125605497450144, -0.637155464900669, -0.512357488495517, -0.0969095482431325, -0.264889328009242, -0.462960196131467, -0.652506034959353, -0.654980719478657],
+                      [0.114796977401477, 0.133642627398915, 0.00398003905718015, 0.135213963541409, 0.0778274998072837, 0.00236050933577499, 0.0182809911031723, 0.0613658367714124, 0.144352418975113, 0.145879465062628],
+                      [-0.00757557256602144, -0.00975246790291974, -4.20814475203766e-05, -0.00994520302344776, -0.00402622391139988, -1.91773084701947e-05, -0.000422562321175286, -0.00275702146449344, -0.0111004908554918, -0.0112992768534210],
+                      [0.000253005987075184, 0.000360990318851794, 2.22548750667826e-07, 0.000371108181001627, 0.000104969461653699, 7.79174941355989e-08, 4.89220734420220e-06, 6.23131797499510e-05, 0.000433554524153778, 0.000444603571714619],
+                      [-5.09917597630331e-06, -8.07242294224030e-06, -7.06282448796569e-10, -8.36671560243239e-06, -1.64817901199774e-06, -1.89964292292871e-10, -3.40114212960727e-08, -8.47475511297256e-07, -1.02364540139071e-05, -1.05764392278550e-05],
+                      [6.87318698916753e-08, 1.20799265418628e-07, 1.49442108524395e-12, 1.26236203646554e-07, 1.72881616596617e-08, 3.08770166106942e-13, 1.57707097489116e-10, 7.69615471756512e-09, 1.61793683585510e-07, 1.68435827681378e-07],
+                      [-6.63019558960889e-10, -1.29418171035270e-09, -2.25869593961810e-15, -1.36363176397323e-09, -1.29690240424437e-10, -3.58492576362679e-16, -5.22483803650272e-13, -4.99701519946585e-11, -1.83121088733948e-09, -1.92091370112439e-09],
+                      [4.80286398171191e-12, 1.04144600573474e-11, 2.56044592923117e-18, 1.10644482840325e-11, 7.30261912535125e-13, 3.12170879112745e-19, 1.29848844251335e-15, 2.43489283036871e-13, 1.55699494918698e-11, 1.64574355682767e-11],
+                      [-2.70833285953644e-14, -6.52496184507332e-14, -2.25755087684351e-21, -6.98985664421818e-14, -3.19996713605594e-15, -2.11429074316866e-22, -2.51024844290998e-18, -9.23186269049210e-16, -1.03080851478047e-13, -1.09790440519160e-13]]
+        self.true_eigen = -1.986050602989757
+        
+    def GradientLnPhi_tf(self, x):
+        return 2 * self.true_z(x)/self.sigma / self.true_y(x)
+    
+    def GradientLnPhi_np(self, x):
+        # Phi is square of self.true_y_np
+        return 2 * self.true_z_np(x)/self.sigma / self.true_y_np(x)
+ 
+
+    def sample_general_old(self, num_sample):
+        dw_sample = normal.rvs(size=[num_sample,
+                                     self.dim,
+                                     self.num_time_interval]) * self.sqrt_delta_t
+        x_sample = np.zeros([num_sample, self.dim, self.num_time_interval + 1])
+        for j in range(self.dim):
+            MCsample = []
+            while len(MCsample) < num_sample:
+                # each time add num_sample samples
+                x_smp = np.random.uniform(0.0, 2*np.pi, size=[num_sample])
+                #pdf = 0.5 #value of function f(x_smp)
+                bases_cos = 0 * x_smp
+                for m in range(self.N):
+                    bases_cos = bases_cos + np.cos(m * x_smp) * self.coef[m][j]
+                pdf = np.square(bases_cos)
+                reject = np.random.uniform(0.0, self.sup[j], size=[num_sample])
+                x_smp = x_smp * (np.sign(pdf - reject) + 1) * 0.5
+                temp = x_smp[x_smp != 0]
+                MCsample.extend(temp)
+            x_sample[:, j, 0] = MCsample[0:num_sample]
+        for i in range(self.num_time_interval):
+            x_sample[:, :, i + 1] = x_sample[:, :, i] + self.delta_t*\
+            self.GradientLnPhi_np(x_sample[:, :, i]) + self.sigma * dw_sample[:, :, i]
+        return dw_sample, x_sample
+    
+    def f_tf(self, x, y, z):
+        #shape = np.shape(x)
+        #num_sample = shape[0]
+        temp = self.GradientLnPhi_tf(x)
+        return -tf.reduce_sum(temp * z / self.sigma, axis=1, keepdims=True) - tf.reduce_sum(self.ci * tf.cos(x), axis=1, keepdims=True) *y
+        #return - tf.reduce_sum(self.ci * tf.cos(x), axis=1, keepdims=True)
+
+    def true_y_np(self, x):
+        # x in shape [num_sample, dim]
+        bases_cos = 0 * x
+        for m in range(self.N):
+            bases_cos = bases_cos + np.cos(m * x) * self.coef[m]  # Broadcasting
+        return np.prod(bases_cos, axis=1, keepdims=True)
+
+    def true_z_np(self, x):
+        bases_cos = 0
+        for m in range(self.N):
+            bases_cos = bases_cos + np.cos(m * x) * self.coef[m] #Broadcasting
+        bases_sin = 0
+        for m in range(self.N):
+            bases_sin = bases_sin + np.sin(m * x) * self.coef2[m] #Broadcasting
+        y = np.prod(bases_cos, axis=1, keepdims=True)
+        return - y * bases_sin / bases_cos * self.sigma
+    
+    def true_y(self, x):
+        bases_cos = 0 * x
+        for m in range(self.N):
+            bases_cos = bases_cos + tf.cos(m * x) * self.coef[m] #Broadcasting
+        return tf.reduce_prod(bases_cos, axis=1, keepdims=True)
+    
+    def true_z(self, x):
+        bases_cos = 0
+        for m in range(self.N):
+            bases_cos = bases_cos + tf.cos(m * x) * self.coef[m] #Broadcasting
+        bases_sin = 0
+        for m in range(self.N):
+            bases_sin = bases_sin + tf.sin(m * x) * self.coef2[m] #Broadcasting
+        y = tf.reduce_prod(bases_cos, axis=1, keepdims=True)
+        return - y * bases_sin / bases_cos * self.sigma
+
+
 
 
 #class HarmonicOscillatorEigen(Equation):
