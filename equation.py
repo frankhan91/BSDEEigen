@@ -1018,8 +1018,25 @@ class Schrodinger8Eigen(Equation):
         return - y * bases_sin / bases_cos * self.sigma
 
 
+class NonlinearEigen(Equation):
+    # Schrodinger V(x)= \sum_{i=1}^d ci*cos(xi) on squares [0, 2pi]^d
+    # same as Schrodinger, but we use invariant measure to sample
+    def __init__(self, eqn_config):
+        super(NonlinearEigen, self).__init__(eqn_config)
+        self.sigma = np.sqrt(2.0)
+        self.true_eigen = 0.0
+        
+    def f_tf(self, x, y, z):
+        temp = tf.reduce_sum(tf.square(z/self.sigma),axis=1,keepdims=True)
+        return tf.reduce_sum(tf.cos(x), axis=1, keepdims=True) * y - temp / y
+        
+    def true_z(self, x):
+        temp = tf.exp(tf.reduce_sum(tf.cos(x), axis=1, keepdims=True))
+        return - tf.sin(x) * temp * self.sigma #broadcasting
 
-
+    def true_y(self, x):
+        return tf.exp(tf.reduce_sum(tf.cos(x), axis=1, keepdims=True))
+    
 #class HarmonicOscillatorEigen(Equation):
 #    # eigenvalue problem for Harmonic Oscillator
 #    def __init__(self, eqn_config):
