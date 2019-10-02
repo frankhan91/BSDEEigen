@@ -8,9 +8,9 @@ from utility import get_config, DictionaryUtility
 from solver import FeedForwardModel
 
 FLAGS = tf.app.flags.FLAGS
-tf.app.flags.DEFINE_string('config_path', './configs/Schrodinger8.json',
+tf.app.flags.DEFINE_string('config_path', './configs/CubicSchrodinger.json',
                            """The path to load json file.""")
-tf.app.flags.DEFINE_string('exp_name', 'Schrodinger8invariant',
+tf.app.flags.DEFINE_string('exp_name', 'CubicSchrodinger_unnorm',
                            """The name of numerical experiments.""")
 tf.app.flags.DEFINE_integer('num_run', 1,
                             """The number of experiments to repeatedly run for the same problem.""")
@@ -40,7 +40,7 @@ def main():
         with tf.Session() as sess:
             logging.info('Begin to solve %s with run %d' % (FLAGS.exp_name, idx_run))
             model = FeedForwardModel(config, bsde, sess)
-            model.build()
+            model.build_unnorm()
             training_history = model.train()
             # save training history
             np.savetxt('{}_log_{}d,i{},T{},N{}x{}.csv'.format(path_prefix, dim,i,T,l,NN_size[0]),
