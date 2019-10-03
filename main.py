@@ -45,9 +45,9 @@ def main():
             # save training history
             np.savetxt('{}_log_{}d,i{},T{},N{}x{}.csv'.format(path_prefix, dim,i,T,l,NN_size[0]),
                        training_history,
-                       fmt=['%d', '%.5e', '%.5e', '%.5e', '%.5e', '%.5e', '%.5e', '%d'],
+                       fmt=['%d', '%.5e', '%.5e', '%.5e', '%.5e', '%.5e', '%.5e', '%.5e', '%d'],
                        delimiter=",",
-                       header="step,train_loss, eigen_error, init_rel_loss, grad_error, NN_consist, l2, elapsed_time",
+                       header="step,train_loss, eigen_error, init_rel_loss, grad_error, NN_consist,eqn_error ,l2, elapsed_time",
                        comments='')
 
 

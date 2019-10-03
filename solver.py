@@ -25,7 +25,7 @@ class FeedForwardModel(object):
         self.x = tf.placeholder(TF_DTYPE, [None, self.dim, self.num_time_interval + 1], name='X')
         self.x_input_fake = np.zeros(
             shape=[self.nn_config.batch_size, self.dim, self.num_time_interval+1])
-        self.train_loss, self.eigen_error, self.init_rel_loss, self.NN_consist, self.l2 = None, None, None, None, None
+        self.train_loss, self.eigen_error, self.init_rel_loss, self.NN_consist, self.eqn_error,self.l2 = None, None, None, None, None, None
         self.train_ops, self.t_build = None, None
         self.eigen = tf.get_variable('eigen', shape=[1], dtype=TF_DTYPE,
                                      initializer=tf.random_uniform_initializer(-3.001, -3.0), trainable=True)
@@ -46,15 +46,15 @@ class FeedForwardModel(object):
         # begin sgd iteration
         for step in range(self.nn_config.num_iterations+1):
             if step % self.nn_config.logging_frequency == 0:
-                train_loss, eigen_error, init_rel_loss, grad_error, NN_consist,l2 = self.sess.run(
-                    [self.train_loss, self.eigen_error, self.init_rel_loss, self.grad_error, self.NN_consist, self.l2],
+                train_loss, eigen_error, init_rel_loss, grad_error, NN_consist,eqn_error,l2 = self.sess.run(
+                    [self.train_loss, self.eigen_error, self.init_rel_loss, self.grad_error, self.NN_consist, self.eqn_error,self.l2],
                     feed_dict=feed_dict_valid)
                 elapsed_time = time.time()-start_time+self.t_build
-                training_history.append([step, train_loss, eigen_error, init_rel_loss, grad_error,NN_consist, l2, elapsed_time])
+                training_history.append([step, train_loss, eigen_error, init_rel_loss, grad_error,NN_consist,eqn_error, l2, elapsed_time])
                 if self.nn_config.verbose:
                     logging.info(
-                        "step: %5u,    train_loss: %.4e,   eigen_error: %.4e, grad_error: %.4e, NN_consist: %.4e, l2: %.4e " % (
-                            step, train_loss, eigen_error, grad_error, NN_consist, l2) +
+                        "step: %5u,    train_loss: %.4e,   eigen_error: %.4e, grad_error: %.4e, NN_consist: %.4e, eqn_error: %.4e, l2: %.4e " % (
+                            step, train_loss, eigen_error, grad_error, NN_consist, eqn_error, l2) +
                         "init_rel_loss: %.4e,   elapsed time %3u" % (
                          init_rel_loss, elapsed_time))
             # use function for sampling, could be bsde.true_y_np or self.y_init_func
@@ -136,6 +136,7 @@ class FeedForwardModel(object):
         self.l2 = yl2
         self.grad_error = tf.sqrt(tf.reduce_mean(error_z ** 2))
         self.NN_consist = tf.sqrt(tf.reduce_mean(NN_consist ** 2))
+        self.eqn_error = tf.constant(0)
 #        self.eigen_error = temp1
 #        self.grad_error = temp2
 #        self.NN_consist = temp3
@@ -208,6 +209,7 @@ class FeedForwardModel(object):
         self.l2 = yl2
         self.grad_error = tf.constant(0)
         self.NN_consist = tf.constant(0)
+        self.eqn_error = tf.constant(0)
         # train operations
         global_step = tf.get_variable('global_step', [],
                                       initializer=tf.constant_initializer(0),
@@ -236,7 +238,17 @@ class FeedForwardModel(object):
             y_init = y_init_and_gradient[0]
             grad_y = y_init_and_gradient[1]
             z = net_z(x_init, need_grad=False)
-            #z_init = z
+            x_init_split = tf.split(x_init, self.dim, axis=1)
+            x_init_concat = tf.concat(x_init_split, axis=1)
+            #z_and_gradient = net_z(x_init, need_grad=True)
+            #z = z_and_gradient[0]
+            #Hess = z_and_gradient[1]
+            z_init = net_z(x_init_concat, need_grad=False)
+            Laplician = []
+            for i in range(self.dim):
+                Laplician.append(tf.reshape( tf.gradients(z_init[:,i], x_init_split[i]), [-1,1]))
+            Laplician = tf.reduce_sum(tf.concat(Laplician, axis=1), axis = 1) / self.bsde.sigma
+            
             yl2 = tf.reduce_mean(y_init ** 2)
             true_z = self.bsde.true_z(x_init)
             #y_init_unnormalized = y_init
@@ -249,7 +261,8 @@ class FeedForwardModel(object):
             #NN_consist = grad_y * sign /tf.sqrt(tf.reduce_mean(grad_y ** 2)) - normed_true_z
             self.y_init = y_init
             y = y_init
-            
+            # recall that f_tf = -V*y - epsl*y^3, the eqn is -\Delta psi - f = lambda psi
+            self.eqn_error = tf.reduce_mean(tf.abs(- Laplician - self.bsde.f_tf(x_init, y_init, z) - self.eigen * y_init))
 #            y_init_copy  = self.net_y_copy(x_init,need_grad=False)
 #            yl2_copy = tf.reduce_mean(y_init_copy ** 2)
 #            self.y_init_copy = y_init_copy / tf.sqrt(yl2_copy)
@@ -275,7 +288,7 @@ class FeedForwardModel(object):
             self.train_loss = tf.reduce_mean(
                 tf.where(tf.abs(delta) < DELTA_CLIP, tf.square(delta),
                          2 * DELTA_CLIP * tf.abs(delta) - DELTA_CLIP ** 2)) * 100 \
-                    + tf.nn.relu(0.2 - tf.reduce_mean(tf.abs(y_init))) * 10000
+                    + tf.nn.relu(0.8 - tf.reduce_mean(tf.abs(y_init))) * 100
         true_init = self.bsde.true_y(self.x[:, :, 0])
         self.train_loss0 = tf.reduce_mean(tf.square(y_init - true_init))\
             + tf.reduce_mean(tf.square(error_z))
@@ -366,6 +379,7 @@ class FeedForwardModel(object):
         self.l2 = yl2
         self.grad_error = tf.sqrt(tf.reduce_mean(error_z ** 2))
         self.NN_consist = tf.constant(0)
+        self.eqn_error = tf.constant(0)
         # train operations
         global_step = tf.get_variable('global_step', [],
                                       initializer=tf.constant_initializer(0),

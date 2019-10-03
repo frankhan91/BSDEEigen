@@ -1049,7 +1049,8 @@ class CubicSchrodingerEigen(Equation):
         self.epsl = 0.001
         
     def f_tf(self, x, y, z):
-        temp = self.epsl * tf.exp(2 * tf.reduce_sum(tf.cos(x),axis=1,keepdims=True)) - tf.reduce_sum(tf.square(tf.sin(x)) - tf.cos(x), axis=1, keepdims=True)
+        temp = self.epsl * tf.exp(2 * tf.reduce_sum(tf.cos(x),axis=1,keepdims=True))\
+        - tf.reduce_sum(tf.square(tf.sin(x)) - tf.cos(x), axis=1, keepdims=True)
         #return -self.epsl * tf.pow(y,3) + (temp + 3.0) * self.true_y(x)
         return -self.epsl * tf.pow(y,3) + (temp + 3.0) * y
         
