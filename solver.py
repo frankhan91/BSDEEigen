@@ -142,8 +142,6 @@ class FeedForwardModel(object):
 #        self.NN_consist = temp3
 #        self.init_rel_loss = temp4
         
-        
-        
         # train operations
         global_step = tf.get_variable('global_step', [],
                                       initializer=tf.constant_initializer(0),
@@ -248,6 +246,13 @@ class FeedForwardModel(object):
             for i in range(self.dim):
                 Laplician.append(tf.reshape( tf.gradients(z_init[:,i], x_init_split[i]), [-1,1]))
             Laplician = tf.reduce_sum(tf.concat(Laplician, axis=1), axis = 1) / self.bsde.sigma
+#            Laplician = []
+#            y0 = net_y(x_init_concat,need_grad=True)
+#            y1 = y0[1]
+#            for i in range(self.dim):
+#                Laplician.append(tf.reshape( tf.gradients(y1[:,i], x_init_split[i]), [-1,1]))
+#            Laplician = tf.reduce_sum(tf.concat(Laplician, axis=1), axis = 1) / self.bsde.sigma
+            
             
             yl2 = tf.reduce_mean(y_init ** 2)
             true_z = self.bsde.true_z(x_init)
@@ -266,7 +271,7 @@ class FeedForwardModel(object):
 #            y_init_copy  = self.net_y_copy(x_init,need_grad=False)
 #            yl2_copy = tf.reduce_mean(y_init_copy ** 2)
 #            self.y_init_copy = y_init_copy / tf.sqrt(yl2_copy)
-            
+            y = y * self.bsde.norm_const / yl2
             for t in range(0, self.num_time_interval-1):
                 y = y - self.bsde.delta_t * (self.bsde.f_tf(self.x[:, :, t], y, z) + self.eigen *y) + \
                     tf.reduce_sum(z * self.dw[:, :, t], 1, keepdims=True)
@@ -276,7 +281,7 @@ class FeedForwardModel(object):
                 tf.reduce_sum(z * self.dw[:, :, -1], 1, keepdims=True)
             
             y_xT = net_y(self.x[:, :, -1], need_grad=False, reuse=True) * sign
-            #y_xT = y_xT / tf.sqrt(yl2) * sign
+            y_xT = y_xT / tf.sqrt(yl2) * sign * self.bsde.norm_const
 #            yTl2 = tf.reduce_mean(y ** 2)
 #            yXTl2 = tf.reduce_mean(y_xT ** 2)
 #            delta = y/yTl2 - y_xT/yXTl2
@@ -288,7 +293,7 @@ class FeedForwardModel(object):
             self.train_loss = tf.reduce_mean(
                 tf.where(tf.abs(delta) < DELTA_CLIP, tf.square(delta),
                          2 * DELTA_CLIP * tf.abs(delta) - DELTA_CLIP ** 2)) * 100 \
-                    + tf.nn.relu(0.8 - tf.reduce_mean(tf.abs(y_init))) * 100
+                    + tf.nn.relu(0.2 - tf.reduce_mean(tf.abs(y_init))) * 100
         true_init = self.bsde.true_y(self.x[:, :, 0])
         self.train_loss0 = tf.reduce_mean(tf.square(y_init - true_init))\
             + tf.reduce_mean(tf.square(error_z))
