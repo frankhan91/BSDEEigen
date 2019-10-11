@@ -1,16 +1,16 @@
 {
   "eqn_config": {
     "eqn_name": "Schrodinger8Eigen",
-    "total_time": 0.3,
+    "total_time": 1.0,
     "dim": 10,
-    "num_time_interval": 320
+    "num_time_interval": 300
   },
   "nn_config": {
     "trig_order": 3,
-    "num_hiddens": [400, 400, 400, 400],
+    "num_hiddens": [200, 200, 200, 200],
     "lr_values": [1e-3, 1e-4, 2e-5],
-    "lr_boundaries": [18000, 27000],
-    "num_iterations": 30000,
+    "lr_boundaries": [25000, 35000],
+    "num_iterations": 40000,
     "batch_size": 2048,
     "valid_size": 2048,
     "logging_frequency": 100,
