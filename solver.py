@@ -342,6 +342,65 @@ class FeedForwardModel(object):
         
         self.t_build = time.time() - start_time
     
+    
+    def build_true2(self):
+        start_time = time.time()
+        self._init_coef_y = tf.get_variable(
+            'init_coef_y', [1], TF_DTYPE, initializer=tf.constant_initializer(0.8, TF_DTYPE),
+            trainable=True)
+        self._init_coef_z = tf.get_variable(
+            'init_coef_z', [1], TF_DTYPE, initializer=tf.constant_initializer(0.8, TF_DTYPE),
+            trainable=True)
+        with tf.variable_scope('forward'):
+            #net_y = PeriodNet(self.nn_config.num_hiddens, out_dim=1, name='net_y')
+            x_init = self.x[:, :, 0]
+            #y_init = net_y(x_init)
+            self.y_init = self.bsde.true_y(x_init) * self._init_coef_y
+            yl2 = tf.reduce_mean(self.y_init ** 2)
+            y = self.y_init
+            self.z_init = self.bsde.true_z(x_init) * self._init_coef_z
+            z = self.z_init
+            for t in range(0, self.num_time_interval - 1):
+                y = y - self.bsde.delta_t * (self.bsde.f_tf(self.x[:, :, t], y, z) + self.eigen * y) + \
+                    tf.reduce_sum(z * self.dw[:, :, t], 1, keepdims=True)
+                z = self.bsde.true_z(self.x[:, :, t + 1])
+            # terminal time
+            y = y - self.bsde.delta_t * (self.bsde.f_tf(self.x[:, :, -2], y, z) + self.eigen * y) + \
+                tf.reduce_sum(z * self.dw[:, :, -1], 1, keepdims=True)
+
+            #y_xT = net_y(self.x[:, :, -1], reuse=True) / tf.sqrt(yl2) * sign
+            y_xT = self.bsde.true_y(self.x[:, :, -1])
+            delta = y - y_xT
+            # use linear approximation outside the clipped range
+            #self.train_loss = tf.reduce_mean(delta ** 2) * 500
+            self.train_loss = tf.reduce_mean(
+                tf.where(tf.abs(delta) < DELTA_CLIP, tf.square(delta),
+                          2 * DELTA_CLIP * tf.abs(delta) - DELTA_CLIP ** 2)) * 100
+                # + tf.reduce_mean(tf.where(tf.abs(grad_y) < DELTA_CLIP, tf.square(grad_y), 2 * DELTA_CLIP * tf.abs(grad_y) - DELTA_CLIP ** 2))
+        # f_tf also gives the true eigenfunction
+        self.init_rel_loss = self._init_coef_y -1
+        self.eigen_error = self.eigen - self.bsde.true_eigen
+        self.l2 = yl2
+        self.grad_error = self._init_coef_z -1
+        self.NN_consist = tf.constant(0)
+        self.eqn_error = tf.constant(0)
+        # train operations
+        global_step = tf.get_variable('global_step', [],
+                                      initializer=tf.constant_initializer(0),
+                                      trainable=False, dtype=tf.int32)
+        learning_rate = tf.train.piecewise_constant(global_step,
+                                                    self.nn_config.lr_boundaries,
+                                                    self.nn_config.lr_values)
+        trainable_variables = tf.trainable_variables()
+        grads = tf.gradients(self.train_loss, trainable_variables)
+        optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
+        apply_op = optimizer.apply_gradients(zip(grads, trainable_variables),
+                                             global_step=global_step, name='train_step')
+
+        all_ops = [apply_op] + self.extra_train_ops
+        self.train_ops = tf.group(*all_ops)
+        self.t_build = time.time() - start_time
+    
     def build_true_y(self):
         start_time = time.time()
         with tf.variable_scope('forward'):
