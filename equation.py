@@ -25,6 +25,7 @@ class Equation(object):
         return dw_sample, x_sample
 
     def sample_general_new(self, num_sample, sample_func):
+        # initially sample according to the current nueral network
         dw_sample = normal.rvs(size=[num_sample,
                                      self.dim,
                                      self.num_time_interval]) * self.sqrt_delta_t
@@ -109,11 +110,9 @@ class FokkerPlanckEigen(Equation):
     
     def f_tf(self, x, y, z):
         return -y * tf.cos(x[:,0:1])
-#        return y * self.laplician_v(self, x)
 
     def true_y(self, x):
         return tf.exp(-tf.cos(x[:,0:1]))
-#        return tf.exp(-self.v(self, x))
         
     def true_z(self, x):
         x1 = tf.concat([x[:,0:1],x[:,1:]*0], axis=1)
@@ -133,7 +132,6 @@ class FokkerPlanck2Eigen(Equation):
     
     def f_tf(self, x, y, z):
         return -5 * y * tf.cos(x[:,0:1] + 2 * x[:,1:2])
-#        return y * self.laplician_v(self, x)
     
     def grad_v(self, x):
         temp = np.sin(x[:,0:1] + 2 * x[:,1:2])
@@ -162,13 +160,11 @@ class FokkerPlanck3Eigen(Equation):
         self.true_eigen = 0
         
     def v(self, x):
-        # the size of x is [num_sample, dim]
         return tf.cos(tf.cos(x[:,0:1]) + 2 * x[:,1:2])
     
     def f_tf(self, x, y, z):
         return y * (tf.cos(x[:,0:1]) * tf.sin(tf.cos(x[:,0:1]) + 2 * x[:,1:2]) - \
                     ( 4 + tf.square(tf.sin(x[:,0:1])) ) * tf.cos(tf.cos(x[:,0:1]) + 2 * x[:,1:2]))
-#        return y * self.laplician_v(self, x)
     
     def grad_v(self, x):
         temp = np.sin(np.cos(x[:,0:1]) + 2 * x[:,1:2])
@@ -234,7 +230,6 @@ class FokkerPlanck4Eigen(Equation):
 
     def true_y(self, x):
         return tf.exp(-tf.cos(x[:,0:1]))
-#        return tf.exp(-self.v(self, x))
         
     def true_z(self, x):
         x1 = tf.concat([x[:,0:1],x[:,1:]*0], axis=1)
@@ -354,7 +349,6 @@ class SchrodingerEigen(Equation):
             while len(MCsample) < num_sample:
                 # each time add num_sample samples
                 x_smp = np.random.uniform(0.0, 2*np.pi, size=[num_sample])
-                #pdf = 0.5 #value of function f(x_smp)
                 bases_cos = 0 * x_smp
                 for m in range(self.N):
                     bases_cos = bases_cos + np.cos(m * x_smp) * self.coef[m][j]
@@ -430,6 +424,7 @@ class Schrodinger2Eigen(Equation):
         self.true_eigen = -1.986050602989757
     
     def sample_general_old(self, num_sample):
+        # cheat sampling
         dw_sample = normal.rvs(size=[num_sample,
                                      self.dim,
                                      self.num_time_interval]) * self.sqrt_delta_t
@@ -512,7 +507,6 @@ class Schrodinger3Eigen(Equation):
                
         
     def sample_general_old(self, num_sample):
-        N = 10
         dw_sample = normal.rvs(size=[num_sample,
                                      self.dim,
                                      self.num_time_interval]) * self.sqrt_delta_t
@@ -521,10 +515,9 @@ class Schrodinger3Eigen(Equation):
         for j in range(self.dim):
             MCsample = []
             while len(MCsample) < num_sample:
-                # each time add num_sample samples
                 x_smp = np.random.uniform(0.0, 2*np.pi, size=[num_sample])
                 bases_cos = 0 * x_smp
-                for m in range(N):
+                for m in range(self.N):
                     bases_cos = bases_cos + np.cos(m * x_smp) * self.coef[m][j]
                 pdf = np.abs(bases_cos) #value of function f(x_smp)
                 reject = np.random.uniform(0.0, self.sup[j], size=[num_sample])
@@ -763,11 +756,8 @@ class Schrodinger6Eigen(Equation):
         return dw_sample, x_sample
     
     def f_tf(self, x, y, z):
-        #shape = np.shape(x)
-        #num_sample = shape[0]
         temp = self.GradientLnPhi_tf(x)
         return -tf.reduce_sum(temp * z / self.sigma, axis=1, keepdims=True) - tf.reduce_sum(self.ci * tf.cos(x), axis=1, keepdims=True) *y
-        #return - tf.reduce_sum(self.ci * tf.cos(x), axis=1, keepdims=True)
 
     def true_y_np(self, x):
         # x in shape [num_sample, dim]
@@ -841,7 +831,6 @@ class Schrodinger7Eigen(Equation):
     def GradientLnPhi_np(self, x):
         # Phi is square of self.true_y_np
         return 2 * self.true_z_np(x)/self.sigma / self.true_y_np(x)
- 
 
     def sample_general_old(self, num_sample):
         dw_sample = normal.rvs(size=[num_sample,
@@ -851,9 +840,7 @@ class Schrodinger7Eigen(Equation):
         for j in range(self.dim):
             MCsample = []
             while len(MCsample) < num_sample:
-                # each time add num_sample samples
                 x_smp = np.random.uniform(0.0, 2*np.pi, size=[num_sample])
-                #pdf = 0.5 #value of function f(x_smp)
                 bases_cos = 0 * x_smp
                 for m in range(self.N):
                     bases_cos = bases_cos + np.cos(m * x_smp) * self.coef[m][j]
@@ -869,14 +856,10 @@ class Schrodinger7Eigen(Equation):
         return dw_sample, x_sample
     
     def f_tf(self, x, y, z):
-        #shape = np.shape(x)
-        #num_sample = shape[0]
         temp = self.GradientLnPhi_tf(x)
         return -tf.reduce_sum(temp * z / self.sigma, axis=1, keepdims=True) - tf.reduce_sum(self.ci * tf.cos(x), axis=1, keepdims=True) *y
-        #return - tf.reduce_sum(self.ci * tf.cos(x), axis=1, keepdims=True)
 
     def true_y_np(self, x):
-        # x in shape [num_sample, dim]
         bases_cos = 0 * x
         for m in range(self.N):
             bases_cos = bases_cos + np.cos(m * x) * self.coef[m]  # Broadcasting
@@ -919,7 +902,7 @@ class Schrodinger8Eigen(Equation):
         self.ci = [0.814723686393179,0.905791937075619,0.126986816293506,\
                    0.913375856139019,0.632359246225410,0.097540404999410,\
                    0.278498218867048,0.546881519204984,0.957506835434298,0.964888535199277]
-        # supremum of each dimension's eigenfunction's absolute value
+        # supremum of each dimension's eigenfunction's absolute value squared
         self.sup = [1.56400342750522 ** 2,1.59706136953917 ** 2,1.12365661150691 ** 2,1.59964582497994 ** 2,1.48429801251911 ** 2,1.09574523792265 ** 2,1.25645243657419 ** 2,1.43922742759836 ** 2,1.61421652060220 ** 2,1.61657863431884 ** 2]
         self.coef = [[0.904929598872363, 0.892479070097153, 0.996047011600309, 0.891473839010153, 0.931658124581625, 0.997649023058051, 0.982280529025825, 0.944649556846450, 0.885723649385784, 0.884778462161165],
                      [-0.599085866194182, -0.634418280724547, -0.125605497450144, -0.637155464900669, -0.512357488495517, -0.0969095482431325, -0.264889328009242, -0.462960196131467, -0.652506034959353, -0.654980719478657],
@@ -960,9 +943,7 @@ class Schrodinger8Eigen(Equation):
         for j in range(self.dim):
             MCsample = []
             while len(MCsample) < num_sample:
-                # each time add num_sample samples
                 x_smp = np.random.uniform(0.0, 2*np.pi, size=[num_sample])
-                #pdf = 0.5 #value of function f(x_smp)
                 bases_cos = 0 * x_smp
                 for m in range(self.N):
                     bases_cos = bases_cos + np.cos(m * x_smp) * self.coef[m][j]
@@ -978,14 +959,10 @@ class Schrodinger8Eigen(Equation):
         return dw_sample, x_sample
     
     def f_tf(self, x, y, z):
-        #shape = np.shape(x)
-        #num_sample = shape[0]
         temp = self.GradientLnPhi_tf(x)
         return -tf.reduce_sum(temp * z / self.sigma, axis=1, keepdims=True) - tf.reduce_sum(self.ci * tf.cos(x), axis=1, keepdims=True) *y
-        #return - tf.reduce_sum(self.ci * tf.cos(x), axis=1, keepdims=True)
 
     def true_y_np(self, x):
-        # x in shape [num_sample, dim]
         bases_cos = 0 * x
         for m in range(self.N):
             bases_cos = bases_cos + np.cos(m * x) * self.coef[m]  # Broadcasting
@@ -1040,17 +1017,16 @@ class NonlinearEigen(Equation):
 
 class CubicSchrodingerEigen(Equation):
     # Cubic Schrodinger L psi = -Delta psi + epsl psi^3 + V psi
-    # where V(x)= \sum_{i=1}^d (sin^2(xi) - cos(xi)) - epsl exp(2 \sum_{i=1}^d cos(xi))-3 
-    # on squares [0, 2pi]^d. True eigenvalue=-3, eigenfunction exp(\sum_{i=1}^d cos(xi))
-    # \int_{0}^{2pi} exp(2cos(x))dx = 14.3231 = 2pi * 2.27959
-    # 
+    # where V(x)= \sum_{i=1}^d (sin^2(xi) - cos(xi)) - epsl* exp(2 \sum_{i=1}^d cos(xi))/4^d -3 
+    # on squares [0, 2pi]^d. True eigenvalue=-3, eigenfunction exp(\sum_{i=1}^d cos(xi)) / 2^d
+    # \int_{0}^{2pi} exp(2cos(x))dx = 14.3231 = 2pi * 2.27959 
     def __init__(self, eqn_config):
         super(CubicSchrodingerEigen, self).__init__(eqn_config)
         self.sigma = np.sqrt(2.0)
         self.true_eigen = -3.0
         self.epsl = 0.001
         self.dim = eqn_config.dim
-        self.norm_const = 0.5699 ** eqn_config.dim #2.27959/4 = 0.5699
+        self.norm_const = np.sqrt(0.5699 ** eqn_config.dim) #2.27959/4 = 0.5699
         
     def f_tf(self, x, y, z):
         temp = self.epsl / (4 ** self.dim) * tf.exp(2 * tf.reduce_sum(tf.cos(x),axis=1,keepdims=True))\
@@ -1064,28 +1040,3 @@ class CubicSchrodingerEigen(Equation):
 
     def true_y(self, x):
         return tf.exp(tf.reduce_sum(tf.cos(x), axis=1, keepdims=True)) / (2 ** self.dim)
-
-#class HarmonicOscillatorEigen(Equation):
-#    # eigenvalue problem for Harmonic Oscillator
-#    def __init__(self, eqn_config):
-#        super(HarmonicOscillatorEigen, self).__init__(eqn_config)
-#        self.sigma = np.sqrt(2.0)
-#
-#    def sample(self, num_sample):
-#        dw_sample = normal.rvs(size=[num_sample,
-#                                     self.dim,
-#                                     self.num_time_interval]) * self.sqrt_delta_t
-#        x_sample = np.zeros([num_sample, self.dim, self.num_time_interval + 1])
-#        x_sample[:, :, 0] = np.random.normal(0.0, 1.0, size=[num_sample, self.dim])
-#        for i in range(self.num_time_interval):
-#            x_sample[:, :, i + 1] = x_sample[:, :, i] + self.sigma * dw_sample[:, :, i]
-#        return dw_sample, x_sample
-#    
-#    def f_tf(self, x, y, z):
-#        return -y * tf.reduce_sum(x ** 2, axis=1, keepdims=False)
-#        
-#    def true_z(self, x):
-#        return -x * tf.exp(-0.5 * tf.reduce_sum(x ** 2, axis=1, keepdims=False))
-#
-#    def true_y(self, x):
-#        return tf.exp(-0.5 * tf.reduce_sum(x ** 2, axis=1, keepdims=False))
