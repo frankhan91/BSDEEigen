@@ -1016,7 +1016,7 @@ class NonlinearEigen(Equation):
     
 
 class CubicSchrodingerEigen(Equation):
-    # Cubic Schrodinger L psi = -Delta psi + epsl psi^3 + V psi
+    # Cubic Schrodinger L psi = -Delta psi + epsl psi^3 + V psi  dim=2
     # where V(x)= \sum_{i=1}^d (sin^2(xi) - cos(xi)) - epsl* exp(2 \sum_{i=1}^d cos(xi))/4^d -3 
     # on squares [0, 2pi]^d. True eigenvalue=-3, eigenfunction exp(\sum_{i=1}^d cos(xi)) / 2^d
     # \int_{0}^{2pi} exp(2cos(x))dx = 14.3231 = 2pi * 2.27959 
@@ -1024,7 +1024,33 @@ class CubicSchrodingerEigen(Equation):
         super(CubicSchrodingerEigen, self).__init__(eqn_config)
         self.sigma = np.sqrt(2.0)
         self.true_eigen = -3.0
-        self.epsl = 0.001
+        self.epsl = 1
+        self.dim = eqn_config.dim
+        self.norm_const = np.sqrt(0.5699 ** eqn_config.dim) #2.27959/4 = 0.5699
+        
+    def f_tf(self, x, y, z):
+        temp = self.epsl / (4 ** self.dim) * tf.exp(2 * tf.reduce_sum(tf.cos(x),axis=1,keepdims=True))\
+        - tf.reduce_sum(tf.square(tf.sin(x)) - tf.cos(x), axis=1, keepdims=True)
+        #return -self.epsl * tf.pow(y,3) + (temp + 3.0) * self.true_y(x)
+        return -self.epsl * tf.pow(y,3) + (temp + 3.0) * y
+        
+    def true_z(self, x):
+        temp = tf.exp(tf.reduce_sum(tf.cos(x), axis=1, keepdims=True))
+        return - tf.sin(x) * temp * self.sigma /(2 ** self.dim) #broadcasting
+
+    def true_y(self, x):
+        return tf.exp(tf.reduce_sum(tf.cos(x), axis=1, keepdims=True)) / (2 ** self.dim)
+
+class CubicSchrodinger2Eigen(Equation):
+    # Cubic Schrodinger L psi = -Delta psi + epsl psi^3 + V psi   dim=5
+    # where V(x)= \sum_{i=1}^d (sin^2(xi) - cos(xi)) - epsl* exp(2 \sum_{i=1}^d cos(xi))/4^d -3 
+    # on squares [0, 2pi]^d. True eigenvalue=-3, eigenfunction exp(\sum_{i=1}^d cos(xi)) / 2^d
+    # \int_{0}^{2pi} exp(2cos(x))dx = 14.3231 = 2pi * 2.27959 
+    def __init__(self, eqn_config):
+        super(CubicSchrodinger2Eigen, self).__init__(eqn_config)
+        self.sigma = np.sqrt(2.0)
+        self.true_eigen = -3.0
+        self.epsl = 1
         self.dim = eqn_config.dim
         self.norm_const = np.sqrt(0.5699 ** eqn_config.dim) #2.27959/4 = 0.5699
         

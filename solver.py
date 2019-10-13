@@ -28,7 +28,8 @@ class FeedForwardModel(object):
         self.train_loss, self.eigen_error, self.init_rel_loss, self.NN_consist, self.eqn_error,self.l2 = None, None, None, None, None, None
         self.train_ops, self.t_build = None, None
         self.eigen = tf.get_variable('eigen', shape=[1], dtype=TF_DTYPE,
-                                     initializer=tf.random_uniform_initializer(-3.501, -3.5), trainable=True)
+                                     initializer=tf.random_uniform_initializer(self.eqn_config.initeigen_low, self.eqn_config.initeigen_high),
+                                     trainable=True)
        
     def train(self):
         start_time = time.time()
@@ -255,11 +256,11 @@ class FeedForwardModel(object):
         #rel_err = tf.boolean_mask(rel_err, mask)
         #self.init_rel_loss = tf.reduce_mean(rel_err)
         # second way
-        #rel_err = tf.reduce_mean(tf.square(y_init/ tf.sqrt(yl2) * sign * self.bsde.norm_const - true_init))/tf.reduce_mean(tf.square(true_init))
-        #self.init_rel_loss = tf.sqrt(rel_err)
+        rel_err = tf.reduce_mean(tf.square(y_init/ tf.sqrt(yl2) * sign * self.bsde.norm_const - true_init))/tf.reduce_mean(tf.square(true_init))
+        self.init_rel_loss = tf.sqrt(rel_err)
         # third way
-        rel_err = tf.reduce_mean(tf.abs(y_init/ tf.sqrt(yl2) * sign * self.bsde.norm_const - true_init))/tf.reduce_mean(tf.abs(true_init))
-        self.init_rel_loss = rel_err
+        #rel_err = tf.reduce_mean(tf.abs(y_init/ tf.sqrt(yl2) * sign * self.bsde.norm_const - true_init))/tf.reduce_mean(tf.abs(true_init))
+        #self.init_rel_loss = rel_err
         
         self.eigen_error = self.eigen - self.bsde.true_eigen
         self.l2 = yl2
