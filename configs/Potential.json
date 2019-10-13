@@ -1,9 +1,11 @@
 {
   "eqn_config": {
     "eqn_name": "PotentialEigen",
-    "total_time": 0.06,
+    "total_time": 0.08,
     "dim": 2,
-    "num_time_interval": 40
+    "num_time_interval": 40,
+    "initeigen_low": -1.0,
+    "initeigen_high": 0.0
   },
   "nn_config": {
     "trig_order": 3,

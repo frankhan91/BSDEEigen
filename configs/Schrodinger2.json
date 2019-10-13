@@ -1,18 +1,20 @@
 {
   "eqn_config": {
     "eqn_name": "Schrodinger2Eigen",
-    "total_time": 0.2,
+    "total_time": 0.3,
     "dim": 10,
-    "num_time_interval": 320
+    "num_time_interval": 320,
+    "initeigen_low": -2.5,
+    "initeigen_high": -1.8
   },
   "nn_config": {
     "trig_order": 3,
-    "num_hiddens": [200, 200, 200, 200],
-    "lr_values": [1e-3, 1e-4, 1e-5],
-    "lr_boundaries": [20000, 23000],
-    "num_iterations": 24000,
-    "batch_size": 512,
-    "valid_size": 256,
+    "num_hiddens": [400, 400, 400, 400],
+    "lr_values": [1e-3, 1e-4, 2e-5],
+    "lr_boundaries": [20000, 35000],
+    "num_iterations": 50000,
+    "batch_size": 2048,
+    "valid_size": 2048,
     "logging_frequency": 100,
     "verbose": "True"
   }

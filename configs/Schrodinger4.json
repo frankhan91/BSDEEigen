@@ -3,7 +3,9 @@
     "eqn_name": "Schrodinger4Eigen",
     "total_time": 0.1,
     "dim": 10,
-    "num_time_interval": 160
+    "num_time_interval": 160,
+    "initeigen_low": -1.0,
+    "initeigen_high": 0.0
   },
   "nn_config": {
     "trig_order": 3,

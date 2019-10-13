@@ -1,20 +1,20 @@
 {
   "eqn_config": {
-    "eqn_name": "CubicSchrodingerEigen",
+    "eqn_name": "CubicSchrodinger2Eigen",
     "total_time": 0.1,
-    "dim": 2,
+    "dim": 5,
     "num_time_interval": 40,
     "initeigen_low": -3.6,
     "initeigen_high": -3.5
   },
   "nn_config": {
     "trig_order": 3,
-    "num_hiddens": [30, 30, 30],
+    "num_hiddens": [100, 100, 100],
     "lr_values": [1e-3,  1e-4, 1e-5],
-    "lr_boundaries": [8000, 10000],
-    "num_iterations": 12000,
-    "batch_size": 1024,
-    "valid_size": 1024,
+    "lr_boundaries": [15000, 18000],
+    "num_iterations": 20000,
+    "batch_size": 2048,
+    "valid_size": 2048,
     "logging_frequency": 100,
     "verbose": "True"
   }

@@ -1,9 +1,11 @@
 {
   "eqn_config": {
     "eqn_name": "Schrodinger6Eigen",
-    "total_time": 0.3,
+    "total_time": 0.9,
     "dim": 5,
-    "num_time_interval": 80
+    "num_time_interval": 80,
+    "initeigen_low": -0.5,
+    "initeigen_high": 0.5
   },
   "nn_config": {
     "trig_order": 3,

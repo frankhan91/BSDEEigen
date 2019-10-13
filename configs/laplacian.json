@@ -1,10 +1,11 @@
 {
   "eqn_config": {
     "eqn_name": "LaplacianEigen",
-    "total_time": 0.1,
+    "total_time": 0.5,
     "dim": 2,
-    "eigen_array": [2, 2],
-    "num_time_interval": 10
+    "num_time_interval": 10,
+    "initeigen_low": -1.0,
+    "initeigen_high": 1.0
   },
   "nn_config": {
     "trig_order": 3,

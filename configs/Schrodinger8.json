@@ -3,7 +3,9 @@
     "eqn_name": "Schrodinger8Eigen",
     "total_time": 1.0,
     "dim": 10,
-    "num_time_interval": 300
+    "num_time_interval": 300,
+    "initeigen_low": -2.5,
+    "initeigen_high": -1.8
   },
   "nn_config": {
     "trig_order": 3,
