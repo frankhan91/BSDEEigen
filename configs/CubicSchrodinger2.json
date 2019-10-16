@@ -1,10 +1,10 @@
 {
   "eqn_config": {
     "eqn_name": "CubicSchrodinger2Eigen",
-    "total_time": 0.1,
+    "total_time": 0.8,
     "dim": 5,
-    "num_time_interval": 40,
-    "initeigen_low": -3.6,
+    "num_time_interval": 160,
+    "initeigen_low": -3.601,
     "initeigen_high": -3.5
   },
   "nn_config": {
