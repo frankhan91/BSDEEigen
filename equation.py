@@ -1050,7 +1050,7 @@ class CubicSchrodinger2Eigen(Equation):
         super(CubicSchrodinger2Eigen, self).__init__(eqn_config)
         self.sigma = np.sqrt(2.0)
         self.true_eigen = -3.0
-        self.epsl = 1
+        self.epsl = 0.1
         self.dim = eqn_config.dim
         self.norm_const = np.sqrt(0.5699 ** eqn_config.dim) #2.27959/4 = 0.5699
         
