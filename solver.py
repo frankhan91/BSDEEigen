@@ -30,6 +30,7 @@ class FeedForwardModel(object):
         self.eigen = tf.get_variable('eigen', shape=[1], dtype=TF_DTYPE,
                                      initializer=tf.random_uniform_initializer(self.eqn_config.initeigen_low, self.eqn_config.initeigen_high),
                                      trainable=True)
+        #self.MovingAverageL2 = tf.get_variable('EMA', shape=[1], dtype=TF_DTYPE)
        
     def train(self):
         start_time = time.time()
@@ -158,6 +159,7 @@ class FeedForwardModel(object):
             y = y_init
             z = self.bsde.true_z(x_init)
             for t in range(0, self.num_time_interval - 1):
+                y = tf.clip_by_value(y,-(2 ** self.dim), 2 ** self.dim ,name=None)
                 y = y - self.bsde.delta_t * (self.bsde.f_tf(self.x[:, :, t], y, z) + self.eigen * y) + \
                     tf.reduce_sum(z * self.dw[:, :, t], 1, keepdims=True)
                 z = self.bsde.true_z(self.x[:, :, t + 1])
@@ -217,8 +219,9 @@ class FeedForwardModel(object):
             for i in range(self.dim):
                 Laplician.append(tf.reshape( tf.gradients(z_init[:,i], x_init_split[i]), [-1,1]))
             Laplician = tf.reduce_sum(tf.concat(Laplician, axis=1), axis = 1) / self.bsde.sigma
-            
-            yl2 = tf.reduce_mean(y_init ** 2)
+            #ema = tf.train.ExponentialMovingAverage(decay=0.99)
+            yl2 = tf.reduce_mean(y_init ** 2) #need to use moving average
+            #self.MovingAverageL2 = yl2
             true_z = self.bsde.true_z(x_init)
             sign = tf.sign(tf.reduce_sum(y_init))
             error_z = z - true_z
@@ -228,36 +231,39 @@ class FeedForwardModel(object):
             y = y_init
             # recall that f_tf = -V*y - epsl*y^3, the eqn is -\Delta psi - f = lambda psi
             self.eqn_error = tf.reduce_mean(tf.abs(- Laplician - self.bsde.f_tf(x_init, y_init, z) - self.eigen * y_init))
-            y = y * sign * self.bsde.norm_const / tf.sqrt(yl2)
+            y = y * sign / tf.sqrt(yl2) * self.bsde.L2mean
+            y = tf.clip_by_value(y,-(2 ** self.dim), 2 ** self.dim ,name=None)
             for t in range(0, self.num_time_interval-1):
                 y = y - self.bsde.delta_t * (self.bsde.f_tf(self.x[:, :, t], y, z) + self.eigen *y) + \
                     tf.reduce_sum(z * self.dw[:, :, t], 1, keepdims=True)
+                y = tf.clip_by_value(y,-(2 ** self.dim), 2 ** self.dim ,name=None)
                 z = net_z(self.x[:, :, t + 1], need_grad=False, reuse=True)
             # terminal time
             y = y - self.bsde.delta_t * (self.bsde.f_tf(self.x[:, :, -2], y, z) + self.eigen *y) + \
                 tf.reduce_sum(z * self.dw[:, :, -1], 1, keepdims=True)
             
             y_xT = net_y(self.x[:, :, -1], need_grad=False, reuse=True)
-            y_xT = y_xT / tf.sqrt(yl2) * sign * self.bsde.norm_const
+            y_xT = y_xT / tf.sqrt(yl2) * sign * self.bsde.L2mean
             delta = y - y_xT
             # use linear approximation outside the clipped range
             self.train_loss = tf.reduce_mean(
                 tf.where(tf.abs(delta) < DELTA_CLIP, tf.square(delta),
                          2 * DELTA_CLIP * tf.abs(delta) - DELTA_CLIP ** 2)) * 100 \
-                    + tf.nn.relu(0.6**self.dim - tf.reduce_mean(tf.abs(y_init))) * 100
+                    + tf.nn.relu(0.8 * (self.bsde.L2mean ** 2) - tf.reduce_mean(tf.square(y_init))) * 100
         # \int{0}^{2pi} exp(cos(x)) dx = 7.95493 = 2pi * 1.26607 = 2pi * 2 * 0.633033
         true_init = self.bsde.true_y(self.x[:, :, 0])
-        self.train_loss0 = tf.reduce_mean(tf.square(y_init - true_init))\
-            + tf.reduce_mean(tf.square(error_z))
-        
+        #self.train_loss0 = tf.reduce_mean(tf.square(y_init - true_init))*100\
+        #    + tf.reduce_mean(tf.square(error_z)) * 200
+        self.train_loss0 = tf.reduce_mean(tf.square(error_z)) * 200
         # There are three ways to compute init_rel_loss
         # first way
         #mask = tf.greater(tf.abs(true_init), 0.1)
-        #rel_err = tf.abs((y_init/ tf.sqrt(yl2) * sign * self.bsde.norm_const - true_init) / true_init)
+        #rel_err = tf.abs((y_init/ tf.sqrt(yl2) * sign - true_init) / true_init)
         #rel_err = tf.boolean_mask(rel_err, mask)
         #self.init_rel_loss = tf.reduce_mean(rel_err)
         # second way
-        rel_err = tf.reduce_mean(tf.square(y_init/ tf.sqrt(yl2) * sign * self.bsde.norm_const - true_init))/tf.reduce_mean(tf.square(true_init))
+        rel_err = tf.reduce_mean(tf.square(y_init/ tf.sqrt(yl2) * sign * self.bsde.L2mean - true_init))/tf.reduce_mean(tf.square(true_init))
+        #rel_err = tf.reduce_mean(tf.square(y_init * sign - true_init))/tf.reduce_mean(tf.square(true_init))
         self.init_rel_loss = tf.sqrt(rel_err)
         # third way
         #rel_err = tf.reduce_mean(tf.abs(y_init/ tf.sqrt(yl2) * sign * self.bsde.norm_const - true_init))/tf.reduce_mean(tf.abs(true_init))
@@ -265,8 +271,8 @@ class FeedForwardModel(object):
         
         self.eigen_error = self.eigen - self.bsde.true_eigen
         self.l2 = yl2
-        #self.grad_error = tf.sqrt(tf.reduce_mean(error_z ** 2)/tf.reduce_mean(true_z ** 2))
-        self.grad_error = tf.reduce_mean(tf.abs(error_z)) / tf.reduce_mean(tf.abs(true_z))
+        self.grad_error = tf.sqrt(tf.reduce_mean(error_z ** 2)/tf.reduce_mean(true_z ** 2))
+        #self.grad_error = tf.reduce_mean(tf.abs(error_z)) / tf.reduce_mean(tf.abs(true_z))
         self.NN_consist = tf.sqrt(tf.reduce_mean(NN_consist ** 2))
         
         # train operations
@@ -282,7 +288,7 @@ class FeedForwardModel(object):
         optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
         apply_op = optimizer.apply_gradients(zip(grads, trainable_variables),
                                              global_step=global_step, name='train_step')
-        
+        #self.extra_train_ops = [ema.apply(self.MovingAverageL2)]
         all_ops = [apply_op] + self.extra_train_ops
         self.train_ops = tf.group(*all_ops)
         
@@ -316,7 +322,7 @@ class FeedForwardModel(object):
             for t in range(0, self.num_time_interval - 1):
                 y = y - self.bsde.delta_t * (self.bsde.f_tf(self.x[:, :, t], y, z) + self.eigen * y) + \
                     tf.reduce_sum(z * self.dw[:, :, t], 1, keepdims=True)
-                z = self.bsde.true_z(self.x[:, :, t + 1])
+                z = self.bsde.true_z(self.x[:, :, t + 1]) * self._init_coef_z
             # terminal time
             y = y - self.bsde.delta_t * (self.bsde.f_tf(self.x[:, :, -2], y, z) + self.eigen * y) + \
                 tf.reduce_sum(z * self.dw[:, :, -1], 1, keepdims=True)
