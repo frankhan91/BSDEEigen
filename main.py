@@ -40,7 +40,7 @@ def main():
         with tf.Session() as sess:
             logging.info('Begin to solve %s with run %d' % (FLAGS.exp_name, idx_run))
             model = FeedForwardModel(config, bsde, sess)
-            model.build_unnorm()
+            model.build_unnorm_ma()
             training_history = model.train()
             # save training history
             np.savetxt('{}_log_{}d,i{},T{},N{}x{}.csv'.format(path_prefix, dim,i,T,l,NN_size[0]),

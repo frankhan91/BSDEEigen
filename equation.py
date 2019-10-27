@@ -1058,7 +1058,7 @@ class CubicSchrodinger2Eigen(Equation):
         # norm_constant makes true_y has unit L2 mean
         self.norm_constant = 1.509829560690897 #sqrt(2.27959)
         # L2mean is the L2 mean of eigenfunction
-        self.L2mean = 0.2
+        self.L2mean = 0.5
         
     def f_tf(self, x, y, z):
         temp = self.epsl / (2.279585302336067 ** self.dim) * (self.L2mean ** 2) * tf.exp(2 * tf.reduce_sum(tf.cos(x),axis=1,keepdims=True))\
