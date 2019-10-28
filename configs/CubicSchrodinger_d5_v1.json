@@ -1,9 +1,10 @@
 {
   "eqn_config": {
     "eqn_name": "CubicSchrodinger2Eigen",
+    "epsl": 0.1,
     "total_time": 0.2,
     "dim": 5,
-    "num_time_interval": 50,
+    "num_time_interval": 120,
     "initeigen_low": -3.601,
     "initeigen_high": -3.5
   },
@@ -12,6 +13,8 @@
     "num_hiddens": [80, 80, 80],
     "lr_values": [1e-4, 1e-4, 1e-5],
     "lr_boundaries": [40000, 50000],
+    "ma_values": [0, 0.4, 0.9],
+    "ma_boundaries": [5000, 20000],
     "num_iterations": 50000,
     "batch_size": 2048,
     "valid_size": 2048,

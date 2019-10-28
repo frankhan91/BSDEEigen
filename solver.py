@@ -302,9 +302,15 @@ class FeedForwardModel(object):
         self.t_build = time.time() - start_time
 
     def build_unnorm_ma(self):
-        DECAY = 0.4
         start_time = time.time()
         with tf.variable_scope('forward'):
+            global_step = tf.get_variable('global_step', [],
+                                          initializer=tf.constant_initializer(0),
+                                          trainable=False, dtype=tf.int32)
+
+            decay = tf.train.piecewise_constant(
+                global_step, self.nn_config.ma_boundaries,
+                [tf.constant(ma, dtype=TF_DTYPE) for ma in self.nn_config.ma_values])
             x_init = self.x[:, :, 0]
             net_y = PeriodNet(self.nn_config.num_hiddens, out_dim=1, name='net_y')
             net_z = PeriodNet(self.nn_config.num_hiddens, out_dim=self.dim, name='net_z')
@@ -328,7 +334,7 @@ class FeedForwardModel(object):
                 'yl2_ma', [1], TF_DTYPE,
                 initializer=tf.constant_initializer(10.0, TF_DTYPE),
                 trainable=False)
-            yl2 = DECAY * yl2_ma + (1 - DECAY) * yl2_batch
+            yl2 = decay * yl2_ma + (1 - decay) * yl2_batch
             true_z = self.bsde.true_z(x_init)
             sign = tf.sign(tf.reduce_sum(y_init))
             error_z = z - true_z
@@ -362,7 +368,7 @@ class FeedForwardModel(object):
                 tf.nn.relu(2 * self.bsde.L2mean - yl2) * 100
 
             self.extra_train_ops.append(
-                moving_averages.assign_moving_average(yl2_ma, yl2_batch, DECAY))
+                moving_averages.assign_moving_average(yl2_ma, yl2_batch, decay))
 
         true_init = self.bsde.true_y(self.x[:, :, 0])
         self.train_loss0 = tf.reduce_mean(tf.square(error_z)) * 200
@@ -377,10 +383,6 @@ class FeedForwardModel(object):
         # self.grad_error = tf.reduce_mean(tf.abs(error_z)) / tf.reduce_mean(tf.abs(true_z))
         self.NN_consist = tf.sqrt(tf.reduce_mean(NN_consist ** 2))
 
-        # train operations
-        global_step = tf.get_variable('global_step', [],
-                                      initializer=tf.constant_initializer(0),
-                                      trainable=False, dtype=tf.int32)
         learning_rate = tf.train.piecewise_constant(global_step,
                                                     self.nn_config.lr_boundaries,
                                                     self.nn_config.lr_values)
