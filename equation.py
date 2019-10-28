@@ -1054,12 +1054,12 @@ class CubicSchrodinger2Eigen(Equation):
         self.sigma = np.sqrt(2.0)
         self.true_eigen = -3.0
         self.epsl = eqn_config.epsl
+        # L2mean is the L2 mean of eigenfunction
+        self.L2mean = eqn_config.L2mean
         self.dim = eqn_config.dim #5
         # norm_constant makes true_y has unit L2 mean
         self.norm_constant = 1.509829560690897 #sqrt(2.27959)
-        # L2mean is the L2 mean of eigenfunction
-        self.L2mean = 0.5
-        
+
     def f_tf(self, x, y, z):
         temp = self.epsl / (2.279585302336067 ** self.dim) * (self.L2mean ** 2) * tf.exp(2 * tf.reduce_sum(tf.cos(x),axis=1,keepdims=True))\
         - tf.reduce_sum(tf.square(tf.sin(x)) - tf.cos(x), axis=1, keepdims=True)
