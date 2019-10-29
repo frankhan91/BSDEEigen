@@ -8,7 +8,7 @@ from utility import get_config, DictionaryUtility
 from solver import FeedForwardModel
 
 FLAGS = tf.app.flags.FLAGS
-tf.app.flags.DEFINE_string('config_path', './configs/CubicSchrodinger_d5_v2.json',
+tf.app.flags.DEFINE_string('config_path', './configs/CubicSchrodinger_d5_v3.json',
                            """The path to load json file.""")
 tf.app.flags.DEFINE_string('exp_name', 'CubicSchrodinger_unnorm',
                            """The name of numerical experiments.""")
