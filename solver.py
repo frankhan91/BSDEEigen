@@ -346,7 +346,7 @@ class FeedForwardModel(object):
             self.eqn_error = tf.reduce_mean(
                 tf.abs(- Laplician - self.bsde.f_tf(x_init, y_init, z) - self.eigen * y_init))
             y = y * sign / tf.sqrt(yl2) * self.bsde.L2mean
-            y = tf.clip_by_value(y, -(2 ** self.dim), 2 ** self.dim, name=None)
+            y = tf.clip_by_value(y, -5, 5, name=None)
             for t in range(0, self.num_time_interval - 1):
                 y = y - self.bsde.delta_t * (
                     self.bsde.f_tf(self.x[:, :, t], y, z) + self.eigen * y) + \

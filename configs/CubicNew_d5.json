@@ -1,0 +1,26 @@
+{
+  "eqn_config": {
+    "eqn_name": "CubicNewEigen",
+    "epsl": 1.0,
+    "L2mean": 1,
+    "norm_constant": 1.104085531496,
+    "total_time": 0.2,
+    "dim": 5,
+    "num_time_interval": 120,
+    "initeigen_low": -3.6,
+    "initeigen_high": -3.5
+  },
+  "nn_config": {
+    "trig_order": 3,
+    "num_hiddens": [80, 80, 80],
+    "lr_values": [1e-4, 1e-5],
+    "lr_boundaries": [40000],
+    "ma_values": [0, 0.4, 0.9],
+    "ma_boundaries": [20000, 35000],
+    "num_iterations": 50000,
+    "batch_size": 2048,
+    "valid_size": 2048,
+    "logging_frequency": 100,
+    "verbose": "True"
+  }
+}

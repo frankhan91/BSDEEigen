@@ -1072,3 +1072,30 @@ class CubicSchrodinger2Eigen(Equation):
 
     def true_y(self, x):
         return tf.exp(tf.reduce_sum(tf.cos(x), axis=1, keepdims=True)) / (self.norm_constant ** self.dim) * self.L2mean
+
+
+class CubicNewEigen(Equation):
+    def __init__(self, eqn_config):
+        super(CubicNewEigen, self).__init__(eqn_config)
+        self.sigma = np.sqrt(2.0)
+        self.true_eigen = -3.0
+        self.epsl = eqn_config.epsl
+        self.dim = eqn_config.dim
+        # norm_constant makes true_y has unit L2 mean
+        # sqrt((integral exp(2*cos(x)/dim) from 0 to 2*pi) / 2/pi) ** dim
+        self.norm_constant = eqn_config.norm_constant
+        # L2mean is the L2 mean of eigenfunction
+        self.L2mean = eqn_config.L2mean
+
+    def f_tf(self, x, y, z):
+        temp = self.epsl / (self.norm_constant**2) * (self.L2mean ** 2) * tf.exp(2 * tf.reduce_mean(tf.cos(x), axis=1, keepdims=True)) \
+               - tf.reduce_sum(tf.square(tf.sin(x)/self.dim) - tf.cos(x)/self.dim, axis=1, keepdims=True)
+        # return -self.epsl * tf.pow(y,3) + (temp + 3.0) * self.true_y(x)
+        return -self.epsl * tf.pow(y, 3) + (temp + 3.0) * y
+
+    def true_z(self, x):
+        temp = tf.exp(tf.reduce_mean(tf.cos(x), axis=1, keepdims=True))
+        return - tf.sin(x) / self.dim * temp * self.sigma / self.norm_constant * self.L2mean  # broadcasting
+
+    def true_y(self, x):
+        return tf.exp(tf.reduce_mean(tf.cos(x), axis=1, keepdims=True)) / self.norm_constant * self.L2mean
