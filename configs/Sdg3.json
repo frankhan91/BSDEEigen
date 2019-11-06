@@ -1,0 +1,21 @@
+{
+  "eqn_config": {
+    "eqn_name": "Sdg3Eigen",
+    "total_time": 0.3,
+    "dim": 5,
+    "num_time_interval": 40,
+    "initeigen_low": -0.3,
+    "initeigen_high": -0.2
+  },
+  "nn_config": {
+    "trig_order": 3,
+    "num_hiddens": [50, 50, 50],
+    "lr_values": [1e-3, 1e-4, 1e-5],
+    "lr_boundaries": [10000, 16000],
+    "num_iterations": 18000,
+    "batch_size": 1024,
+    "valid_size": 1024,
+    "logging_frequency": 100,
+    "verbose": "True"
+  }
+}
