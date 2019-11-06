@@ -116,9 +116,9 @@ class FeedForwardModel(object):
         mask = tf.greater(tf.abs(true_init), 0.1)
         rel_err = tf.abs((y_init - true_init) / true_init)
         rel_err = tf.boolean_mask(rel_err, mask)
-        #error_y = y_init - true_init
-        #self.init_rel_loss = tf.sqrt(tf.reduce_mean(error_y ** 2))
-        self.init_rel_loss = tf.reduce_mean(rel_err)
+        error_y = y_init - true_init
+        self.init_rel_loss = tf.sqrt(tf.reduce_mean(error_y ** 2))
+        #self.init_rel_loss = tf.reduce_mean(rel_err)
         self.eigen_error = self.eigen - self.bsde.true_eigen
         self.l2 = yl2
         self.grad_error = tf.sqrt(tf.reduce_mean(error_z ** 2))
@@ -251,7 +251,7 @@ class FeedForwardModel(object):
                          2 * DELTA_CLIP * tf.abs(delta) - DELTA_CLIP ** 2)) * 100
         # \int{0}^{2pi} exp(cos(x)) dx = 7.95493 = 2pi * 1.26607 = 2pi * 2 * 0.633033
         true_init = self.bsde.true_y(self.x[:, :, 0])
-        #self.train_loss0 = tf.reduce_mean(tf.square(y_init - true_init))*100\
+        #self.train_loss0 = tf.reduce_mean(tf.square(y_init - true_init))*100#\
         #    + tf.reduce_mean(tf.square(error_z)) * 200
         self.train_loss0 = tf.reduce_mean(tf.square(error_z)) * 200
         # There are three ways to compute init_rel_loss
@@ -351,7 +351,7 @@ class FeedForwardModel(object):
                 y = y - self.bsde.delta_t * (
                     self.bsde.f_tf(self.x[:, :, t], y, z) + self.eigen * y) + \
                     tf.reduce_sum(z * self.dw[:, :, t], 1, keepdims=True)
-                y = tf.clip_by_value(y, -(2 ** self.dim), 2 ** self.dim, name=None)
+                y = tf.clip_by_value(y, -5, 5, name=None)
                 z = net_z(self.x[:, :, t + 1], need_grad=False, reuse=True)
             # terminal time
             y = y - self.bsde.delta_t * (
@@ -371,7 +371,7 @@ class FeedForwardModel(object):
                 moving_averages.assign_moving_average(yl2_ma, yl2_batch, decay))
 
         true_init = self.bsde.true_y(self.x[:, :, 0])
-        self.train_loss0 = tf.reduce_mean(tf.square(error_z)) * 200
+        #self.train_loss0 = tf.reduce_mean(tf.square(error_z)) * 200
         rel_err = tf.reduce_mean(tf.square(
             y_init / tf.sqrt(yl2) * sign * self.bsde.L2mean - true_init)) / tf.reduce_mean(
             tf.square(true_init))
@@ -395,13 +395,13 @@ class FeedForwardModel(object):
         all_ops = [apply_op] + self.extra_train_ops
         self.train_ops = tf.group(*all_ops)
 
-        grads0 = tf.gradients(self.train_loss0, trainable_variables)
-        optimizer0 = tf.train.AdamOptimizer(learning_rate=learning_rate)
-        apply_op0 = optimizer0.apply_gradients(zip(grads0, trainable_variables),
-                                               global_step=global_step, name='train0_step')
+        #grads0 = tf.gradients(self.train_loss0, trainable_variables)
+        #optimizer0 = tf.train.AdamOptimizer(learning_rate=learning_rate)
+        #apply_op0 = optimizer0.apply_gradients(zip(grads0, trainable_variables),
+        #                                       global_step=global_step, name='train0_step')
 
-        all_ops0 = [apply_op0] + self.extra_train_ops
-        self.train_ops0 = tf.group(*all_ops0)
+        #all_ops0 = [apply_op0] + self.extra_train_ops
+        #self.train_ops0 = tf.group(*all_ops0)
 
         self.t_build = time.time() - start_time
 
