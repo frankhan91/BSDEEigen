@@ -12,6 +12,10 @@ class Equation(object):
         self.delta_t = (self.total_time + 0.0) / self.num_time_interval
         self.sqrt_delta_t = np.sqrt(self.delta_t)
         self.sigma = 1
+        
+    def sample_hist(self, num_sample):
+        x_sample = np.random.uniform(0.0, 2*np.pi, size=[num_sample, self.dim])
+        return x_sample
 
     def sample_uniform(self, num_sample):
         dw_sample = normal.rvs(size=[num_sample,

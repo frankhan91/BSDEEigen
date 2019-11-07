@@ -6,11 +6,12 @@ import tensorflow as tf
 import equation as eqn
 from utility import get_config, DictionaryUtility
 from solver import FeedForwardModel
+import matplotlib.pyplot as plt
 
 FLAGS = tf.app.flags.FLAGS
-tf.app.flags.DEFINE_string('config_path', './configs/Sdg2.json',
+tf.app.flags.DEFINE_string('config_path', './configs/Schrodinger.json',
                            """The path to load json file.""")
-tf.app.flags.DEFINE_string('exp_name', 'Sdg2',
+tf.app.flags.DEFINE_string('exp_name', 'Schrodinger',
                            """The name of numerical experiments.""")
 tf.app.flags.DEFINE_integer('num_run', 1,
                             """The number of experiments to repeatedly run for the same problem.""")
@@ -41,7 +42,8 @@ def main():
             logging.info('Begin to solve %s with run %d' % (FLAGS.exp_name, idx_run))
             model = FeedForwardModel(config, bsde, sess)
             model.build()
-            training_history = model.train()
+            result = model.train()
+            training_history = result[0]
             # save training history
             np.savetxt('{}_log_{}d,i{},T{},N{}x{}.csv'.format(path_prefix, dim,i,T,l,NN_size[0]),
                        training_history,
@@ -49,6 +51,14 @@ def main():
                        delimiter=",",
                        header="step,train_loss, eigen_error, init_rel_loss, grad_error, NN_consist,eqn_error ,l2, elapsed_time",
                        comments='')
+            y_hist_NN = result[1]
+            y_hist_true = result[2]
+            np.savetxt('{}HistTruey.txt'.format(path_prefix),y_hist_true)
+            np.savetxt('{}HistNN.txt'.format(path_prefix),y_hist_NN)
+#            print(np.histogram(y_hist_true))
+#            print(np.histogram(y_hist_NN))
+#            plt.hist(y_hist_true, bins='auto')
+#            plt.hist(result[1], bins='auto')
 
 
 if __name__ == '__main__':
