@@ -188,8 +188,9 @@ class FeedForwardModel(object):
             self.train_loss = tf.reduce_mean(
                 tf.where(tf.abs(delta) < DELTA_CLIP, tf.square(delta),
                           2 * DELTA_CLIP * tf.abs(delta) - DELTA_CLIP ** 2)) * 100
-            self.hist_NN = tf.constant(0)
-            self.hist_true = tf.constant(0)
+            hist_true_y = self.bsde.true_y(self.x_hist)
+            self.hist_true = hist_true_y / tf.sqrt(tf.reduce_mean(hist_true_y ** 2))
+            self.hist_NN = self.hist_true
         true_init = self.bsde.true_y(self.x[:, :, 0])
         mask = tf.greater(tf.abs(true_init), 0.1)
         rel_err = tf.abs((y_init - true_init) / true_init)
@@ -265,6 +266,12 @@ class FeedForwardModel(object):
             self.train_loss = tf.reduce_mean(
                 tf.where(tf.abs(delta) < DELTA_CLIP, tf.square(delta),
                          2 * DELTA_CLIP * tf.abs(delta) - DELTA_CLIP ** 2)) * 100
+            y_hist = net_y(self.x_hist, need_grad=False, reuse=True)
+            hist_sign = tf.sign(tf.reduce_sum(y_hist))
+            hist_l2 = tf.reduce_mean(y_hist ** 2)
+            self.hist_NN = y_hist / tf.sqrt(hist_l2) * hist_sign
+            hist_true_y = self.bsde.true_y(self.x_hist)
+            self.hist_true = hist_true_y / tf.sqrt(tf.reduce_mean(hist_true_y ** 2))
         # \int{0}^{2pi} exp(cos(x)) dx = 7.95493 = 2pi * 1.26607 = 2pi * 2 * 0.633033
         true_init = self.bsde.true_y(self.x[:, :, 0])
         #self.train_loss0 = tf.reduce_mean(tf.square(y_init - true_init))*100#\
@@ -456,8 +463,9 @@ class FeedForwardModel(object):
             self.train_loss = tf.reduce_mean(
                 tf.where(tf.abs(delta) < DELTA_CLIP, tf.square(delta),
                           2 * DELTA_CLIP * tf.abs(delta) - DELTA_CLIP ** 2)) * 100
-            self.hist_NN = tf.constant(0)
-            self.hist_true = tf.constant(0)
+            hist_true_y = self.bsde.true_y(self.x_hist)
+            self.hist_true = hist_true_y / tf.sqrt(tf.reduce_mean(hist_true_y ** 2))
+            self.hist_NN = self.hist_true
         self.init_rel_loss = self._init_coef_y -1
         self.eigen_error = self.eigen - self.bsde.true_eigen
         self.l2 = yl2
