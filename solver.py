@@ -43,6 +43,7 @@ class FeedForwardModel(object):
         # for validation
         #dw_valid, x_valid = self.bsde.sample_general_old(self.nn_config.valid_size)
         dw_valid, x_valid = self.bsde.sample_uniform(self.nn_config.valid_size)
+        #dw_valid, x_valid = self.bsde.sample(self.nn_config.valid_size)
         # can still use batch norm of samples in the validation phase
         feed_dict_valid = {self.dw: dw_valid, self.x: x_valid}
         # initialization
@@ -65,6 +66,7 @@ class FeedForwardModel(object):
             #dw_train, x_train = self.bsde.sample_general_new(self.nn_config.batch_size,
             #                                              sample_func=self.y_init_func)
             dw_train, x_train = self.bsde.sample_uniform(self.nn_config.batch_size)
+            #dw_train, x_train = self.bsde.sample(self.nn_config.batch_size)
             #dw_train, x_train = self.bsde.sample_general_old(self.nn_config.batch_size)
 #            The following are used when we want accurate initialization of NN
 #            if step < 4000:
