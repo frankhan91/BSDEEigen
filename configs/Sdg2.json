@@ -3,7 +3,7 @@
     "eqn_name": "Sdg2Eigen",
     "total_time": 0.3,
     "dim": 10,
-    "num_time_interval": 160,
+    "num_time_interval": 120,
     "initeigen_low": -0.3,
     "initeigen_high": -0.29
   },
