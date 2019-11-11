@@ -1,0 +1,21 @@
+{
+  "eqn_config": {
+    "eqn_name": "Sdg5Eigen",
+    "total_time": 0.3,
+    "dim": 20,
+    "num_time_interval": 200,
+    "initeigen_low": -0.1,
+    "initeigen_high": -0.09
+  },
+  "nn_config": {
+    "trig_order": 3,
+    "num_hiddens": [200, 200, 200],
+    "lr_values": [1e-3, 1e-4, 2e-5],
+    "lr_boundaries": [20000, 35000],
+    "num_iterations": 40000,
+    "batch_size": 2048,
+    "valid_size": 2048,
+    "logging_frequency": 100,
+    "verbose": "True"
+  }
+}
