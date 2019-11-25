@@ -307,52 +307,6 @@ class FokkerPlanck4Eigen(Equation):
         return tf.sin(x1) * tf.exp(-tf.cos(x1)) * self.sigma
 
 
-class PotentialEigen(Equation):
-    # potential V(x)=cos(x1) on squares [0, 2pi]^d
-    def __init__(self, eqn_config):
-        super(PotentialEigen, self).__init__(eqn_config)
-        self.sigma = np.sqrt(2.0)
-        self.true_eigen = -0.378489221264130
-
-    def sample(self, num_sample):
-        dw_sample = normal.rvs(size=[num_sample,
-                                     self.dim,
-                                     self.num_time_interval]) * self.sqrt_delta_t
-        x_sample = np.zeros([num_sample, self.dim, self.num_time_interval + 1])
-        x_sample[:, :, 0] = np.random.uniform(0.0, 2*np.pi, size=[num_sample, self.dim])
-        for i in range(self.num_time_interval):
-            x_sample[:, :, i + 1] = x_sample[:, :, i] + self.sigma * dw_sample[:, :, i]
-        return dw_sample, x_sample
-    
-    def f_tf(self, x, y, z):
-        return -tf.cos(x[:,0:1])*y
-
-    def true_y(self, x):
-        coef = -tf.constant([-0.880348154038233, 0.666404574526491, -0.0765667378952856,\
-                0.00408869863723629, -0.000124894301350180, 2.46129968618575e-06,\
-                -3.38337623069477e-08, 3.42621149877335e-10, -2.66107082292485e-12], dtype=tf.float64)
-        N = 9
-        bases = []
-        for m in range(N):
-            bases += [tf.cos(m * x[:,0:1])]
-        bases = tf.concat(bases, axis=1)
-        return tf.reduce_sum(coef * bases, axis=1, keepdims=True)
-    
-    def true_z(self, x):
-        coef2 = tf.constant([0, 0.666404574526491, -0.153133475790571, 0.0122660959117089,\
-                             -0.000499577205400720, 1.23064984309287e-05, -2.03002573841686e-07,\
-                             2.39834804914135e-09, -2.12885665833988e-11], dtype=tf.float64)
-        N = 9
-        bases = []
-        for m in range(N):
-            bases += [tf.sin(m * x[:,0:1])]
-        bases = tf.concat(bases, axis=1)
-        temp = tf.reduce_sum(coef2 * bases, axis=1, keepdims=True)
-        return tf.concat([temp,x[:,1:]*0], axis=1) * self.sigma
-
-
-
-
 class SchrodingerEigen(Equation):
     # Schrodinger V(x)= \sum_{i=1}^d ci*cos(xi) on squares [0, 2pi]^d
     # d=2
@@ -384,31 +338,6 @@ class SchrodingerEigen(Equation):
                       [4.80286398171191e-12, 1.04144600573475e-11],
                       [-2.70833285953644e-14, -6.52496184507333e-14]]
         self.true_eigen = -0.591624518674115
-
-#    def sample_general_new(self, num_sample, sample_func):
-#        dw_sample = normal.rvs(size=[num_sample,
-#                                     self.dim,
-#                                     self.num_time_interval]) * self.sqrt_delta_t
-#        x_sample = np.zeros([num_sample, self.dim, self.num_time_interval + 1])
-#        MCsample = np.zeros(shape=[0, self.dim])
-#        sup = 1
-#        while MCsample.shape[0] < num_sample:
-#            x_smp = np.random.uniform(0.0, 2*np.pi, size=[num_sample, self.dim])
-#            pdf = np.abs(sample_func(x_smp))
-#            reject = np.random.uniform(0.0, sup, size=[num_sample, 1])
-#            idx = np.nonzero(pdf > reject)
-#            sample_rate = len(idx[0]) / num_sample
-#            if sample_rate > 0.8:
-#                sup *= 2
-#            elif sample_rate < 0.2:
-#                sup *= 0.5
-#                MCsample = np.concatenate([MCsample, x_smp[idx[0], :]], axis=0)
-#            else:
-#                MCsample = np.concatenate([MCsample, x_smp[idx[0], :]], axis=0)
-#        x_sample[:, :, 0] = MCsample[0:num_sample]
-#        for i in range(self.num_time_interval):
-#            x_sample[:, :, i + 1] = x_sample[:, :, i] + self.sigma * dw_sample[:, :, i]
-#        return dw_sample, x_sample
 
     def sample_general_old(self, num_sample):
         dw_sample = normal.rvs(size=[num_sample,
@@ -1031,7 +960,6 @@ class Schrodinger6Eigen(Equation):
     # same as Schrodinger3, but we use invariant measure to sample
     def __init__(self, eqn_config):
         super(Schrodinger6Eigen, self).__init__(eqn_config)
-        self.h = 0.001;
         self.N = 10
         self.sigma = np.sqrt(2.0)
         self.ci = [0.814723686393179,0.905791937075619,0.126986816293506,\
@@ -1331,26 +1259,6 @@ class Schrodinger8Eigen(Equation):
         y = tf.reduce_prod(bases_cos, axis=1, keepdims=True)
         return - y * bases_sin / bases_cos * self.sigma
 
-
-class NonlinearEigen(Equation):
-    # Schrodinger V(x)= \sum_{i=1}^d ci*cos(xi) on squares [0, 2pi]^d
-    # same as Schrodinger, but we use invariant measure to sample
-    def __init__(self, eqn_config):
-        super(NonlinearEigen, self).__init__(eqn_config)
-        self.sigma = np.sqrt(2.0)
-        self.true_eigen = 0.0
-        
-    def f_tf(self, x, y, z):
-        temp = tf.reduce_sum(tf.square(z/self.sigma),axis=1,keepdims=True)
-        return tf.reduce_sum(tf.cos(x), axis=1, keepdims=True) * y - temp / y
-        
-    def true_z(self, x):
-        temp = tf.exp(tf.reduce_sum(tf.cos(x), axis=1, keepdims=True))
-        return - tf.sin(x) * temp * self.sigma #broadcasting
-
-    def true_y(self, x):
-        return tf.exp(tf.reduce_sum(tf.cos(x), axis=1, keepdims=True))
-    
 
 class CubicSchrodingerEigen(Equation):
     # Cubic Schrodinger L psi = -Delta psi + epsl psi^3 + V psi  dim=2

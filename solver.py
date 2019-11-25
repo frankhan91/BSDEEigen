@@ -201,7 +201,7 @@ class FeedForwardModel(object):
             self.train_loss = tf.reduce_mean(
                 tf.where(tf.abs(delta) < DELTA_CLIP, tf.square(delta),
                          2 * DELTA_CLIP * tf.abs(delta) - DELTA_CLIP ** 2)) * 100 \
-                    + tf.reduce_mean(tf.square(z_init - grad_y)) * 50
+                    + tf.reduce_mean(tf.square(z_init - grad_y)) * 20
             y_hist = net_y(self.x_hist, need_grad=False, reuse=True)
             hist_sign = tf.sign(tf.reduce_sum(y_hist))
             hist_l2 = tf.reduce_mean(y_hist ** 2)

@@ -9,9 +9,9 @@ from solver import FeedForwardModel
 import matplotlib.pyplot as plt
 
 FLAGS = tf.app.flags.FLAGS
-tf.app.flags.DEFINE_string('config_path', './configs/Sdg5.json',
+tf.app.flags.DEFINE_string('config_path', './configs/Sdg3.json',
                            """The path to load json file.""")
-tf.app.flags.DEFINE_string('exp_name', 'Sdg5',
+tf.app.flags.DEFINE_string('exp_name', 'Sdg3',
                            """The name of numerical experiments.""")
 tf.app.flags.DEFINE_integer('num_run', 1,
                             """The number of experiments to repeatedly run for the same problem.""")
@@ -45,7 +45,7 @@ def main():
             result = model.train()
             training_history = result[0]
             # save training history
-            np.savetxt('{}_log_{}d,i{},T{},N{}x{}.csv'.format(path_prefix, dim,i,T,l,NN_size[0]),
+            np.savetxt('{}_log{}_{}d,i{},T{},N{}x{}.csv'.format(path_prefix, idx_run,dim,i,T,l,NN_size[0]),
                        training_history,
                        fmt=['%d', '%.5e', '%.5e', '%.5e', '%.5e', '%.5e', '%.5e', '%.5e', '%d'],
                        delimiter=",",
