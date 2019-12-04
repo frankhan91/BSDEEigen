@@ -4,14 +4,14 @@
     "total_time": 0.2,
     "dim": 10,
     "num_time_interval": 120,
-    "initeigen_low": 0.5,
-    "initeigen_high": 0.5,
-    "coef":[0.1, 0.3, 0.2, 0.5,0.2,0.1,0.3,0.4,0.1,0.1]
+    "initeigen_low": 0.3,
+    "initeigen_high": 0.3,
+    "coef":[0.1, 0.3, 0.2, 0.5, 0.2, 0.1, 0.3, 0.4, 0.2, 0.2]
   },
   "nn_config": {
     "trig_order": 3,
-    "num_hiddens": [200, 200, 200],
-    "lr_values": [1e-3, 1e-4, 1e-5],
+    "num_hiddens": [300, 300, 300],
+    "lr_values": [5e-4, 1e-4, 1e-5],
     "lr_boundaries": [20000, 25000],
     "num_iterations": 30000,
     "batch_size": 2048,

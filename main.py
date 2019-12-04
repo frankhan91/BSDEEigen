@@ -51,14 +51,14 @@ def main():
                        delimiter=",",
                        header="step,train_loss, eigen_error, init_rel_loss, grad_error, NN_consist,eqn_error ,l2, elapsed_time",
                        comments='')
-#            y_hist_NN = result[1]
-#            y_hist_true = result[2]
-#            np.savetxt('{}HistTruey.txt'.format(path_prefix),y_hist_true)
-#            np.savetxt('{}HistNN.txt'.format(path_prefix),y_hist_NN)
-#            print(np.histogram(y_hist_true))
-#            print(np.histogram(y_hist_NN))
-#            plt.hist(y_hist_true, bins='auto')
-#            plt.hist(result[1], bins='auto')
+            # y_hist_NN = result[1]
+            # y_hist_true = result[2]
+            # np.savetxt('{}HistTruey.txt'.format(path_prefix),y_hist_true)
+            # np.savetxt('{}HistNN.txt'.format(path_prefix),y_hist_NN)
+            # print(np.histogram(y_hist_true))
+            # print(np.histogram(y_hist_NN))
+            # plt.hist(y_hist_true, bins='auto')
+            # plt.hist(result[1], bins='auto')
 
 
 if __name__ == '__main__':

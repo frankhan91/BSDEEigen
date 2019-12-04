@@ -34,7 +34,7 @@ class FeedForwardModel(object):
         self.x_hist = tf.placeholder(TF_DTYPE, [None, self.dim], name='x_hist')
         self.hist_NN = None
         self.hist_true = None
-        self.hist_size = 10000
+        self.hist_size = 20000
     
     def train(self):
         start_time = time.time()
