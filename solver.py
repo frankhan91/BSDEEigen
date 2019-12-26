@@ -624,7 +624,97 @@ class FeedForwardModel(object):
         self.x_input_fake[:, :, 0] = x
         return self.sess.run(self.y_init, feed_dict={self.x: self.x_input_fake})
 
-
+    def build_ma(self):
+        start_time = time.time()
+        with tf.variable_scope('forward'):
+            global_step = tf.get_variable('global_step', [],
+                                          initializer=tf.constant_initializer(0),
+                                          trainable=False, dtype=tf.int32)
+            decay = tf.train.piecewise_constant(
+                global_step, self.nn_config.ma_boundaries,
+                [tf.constant(ma, dtype=TF_DTYPE) for ma in self.nn_config.ma_values])
+            x_init = self.x[:, :, 0]
+            net_y = PeriodNet(self.nn_config.num_hiddens, out_dim=1, name='net_y')
+            net_z = PeriodNet(self.nn_config.num_hiddens, out_dim=self.dim, name='net_z')
+            y_init_and_gradient = net_y(x_init,need_grad=True)
+            y_init = y_init_and_gradient[0]
+            grad_y = y_init_and_gradient[1]
+            z = net_z(x_init, need_grad=False)
+            z_init = z
+            
+            yl2_batch = tf.reduce_mean(y_init ** 2)
+            yl2_ma = tf.get_variable(
+                'yl2_ma', [1], TF_DTYPE,
+                initializer=tf.constant_initializer(10.0, TF_DTYPE),
+                trainable=False)
+            yl2 = decay * yl2_ma + (1 - decay) * yl2_batch
+            true_z = self.bsde.true_z(x_init)
+            
+            sign = tf.sign(tf.reduce_sum(y_init))
+            normed_true_z = true_z / tf.sqrt(tf.reduce_mean(true_z ** 2))
+            error_z = z / tf.sqrt(tf.reduce_mean(z ** 2)) - normed_true_z
+            y_init = y_init / tf.sqrt(yl2) * sign
+            grad_y = grad_y * sign / tf.sqrt(yl2)
+            NN_consist = z_init - grad_y
+            #NN_consist = grad_y /tf.sqrt(tf.reduce_mean(grad_y ** 2)) - normed_true_z
+            self.y_init = y_init
+            y = y_init
+            
+            for t in range(0, self.num_time_interval-1):
+                y = y - self.bsde.delta_t * (self.bsde.f_tf(self.x[:, :, t], y, z) + self.eigen *y) + \
+                    tf.reduce_sum(z * self.dw[:, :, t], 1, keepdims=True)
+                z = net_z(self.x[:, :, t + 1], need_grad=False, reuse=True)
+            # terminal time
+            y = y - self.bsde.delta_t * (self.bsde.f_tf(self.x[:, :, -2], y, z) + self.eigen *y) + \
+                tf.reduce_sum(z * self.dw[:, :, -1], 1, keepdims=True)
+            y_xT = net_y(self.x[:, :, -1], need_grad=False, reuse=True)
+            y_xT = y_xT / tf.sqrt(yl2) * sign
+            delta = y - y_xT
+            
+            # use linear approximation outside the clipped range
+            self.train_loss = tf.reduce_mean(
+                tf.where(tf.abs(delta) < DELTA_CLIP, tf.square(delta),
+                         2 * DELTA_CLIP * tf.abs(delta) - DELTA_CLIP ** 2)) * 100 
+            self.extra_train_ops.append(
+                moving_averages.assign_moving_average(yl2_ma, yl2_batch, decay))
+            y_hist = net_y(self.x_hist, need_grad=False, reuse=True)
+            hist_sign = tf.sign(tf.reduce_sum(y_hist))
+            hist_l2 = tf.reduce_mean(y_hist ** 2)
+            self.hist_NN = y_hist / tf.sqrt(hist_l2) * hist_sign
+            hist_true_y = self.bsde.true_y(self.x_hist)
+            self.hist_true = hist_true_y / tf.sqrt(tf.reduce_mean(hist_true_y ** 2))
+        true_init = self.bsde.true_y(self.x[:, :, 0])
+        #self.train_loss0 = tf.reduce_mean(tf.square(y_init_unnormalized - true_init))\
+        #    + tf.reduce_mean(tf.square(z_init - true_z))
+        true_init = true_init / tf.sqrt(tf.reduce_mean(true_init ** 2))
+        #mask = tf.greater(tf.abs(true_init), 0.1)
+        #rel_err = tf.abs((y_init - true_init) / true_init)
+        #rel_err = tf.boolean_mask(rel_err, mask)
+        error_y = y_init - true_init
+        self.init_rel_loss = tf.sqrt(tf.reduce_mean(error_y ** 2))
+        #self.init_rel_loss = tf.reduce_mean(rel_err)
+        self.eigen_error = self.eigen - self.bsde.true_eigen
+        self.l2 = yl2
+        self.grad_error = tf.sqrt(tf.reduce_mean(error_z ** 2))
+        self.NN_consist = tf.sqrt(tf.reduce_mean(NN_consist ** 2))
+        self.eqn_error = tf.constant(0)
+        
+        # train operations
+        
+        learning_rate = tf.train.piecewise_constant(global_step,
+                                                    self.nn_config.lr_boundaries,
+                                                    self.nn_config.lr_values)
+        trainable_variables = tf.trainable_variables()
+        grads = tf.gradients(self.train_loss, trainable_variables)
+        optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
+        apply_op = optimizer.apply_gradients(zip(grads, trainable_variables),
+                                             global_step=global_step, name='train_step')
+        
+        all_ops = [apply_op] + self.extra_train_ops
+        self.train_ops = tf.group(*all_ops)
+        
+        self.t_build = time.time() - start_time
+    
 class PeriodNet(object):
     def __init__(self, num_hiddens, out_dim, name='period_net'):
         self.num_hiddens = num_hiddens
