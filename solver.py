@@ -495,7 +495,7 @@ class FeedForwardModel(object):
             yl2_batch = tf.reduce_mean(y_init ** 2)
             yl2_ma = tf.get_variable(
                 'yl2_ma', [1], TF_DTYPE,
-                initializer=tf.constant_initializer(10.0, TF_DTYPE),
+                initializer=tf.constant_initializer(100.0, TF_DTYPE),
                 trainable=False)
             yl2 = decay * yl2_ma + (1 - decay) * yl2_batch
             true_z = self.bsde.true_z(x_init)
