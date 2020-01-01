@@ -60,6 +60,5 @@ def main():
             # plt.hist(y_hist_true, bins='auto')
             # plt.hist(result[1], bins='auto')
 
-
 if __name__ == '__main__':
     main()
