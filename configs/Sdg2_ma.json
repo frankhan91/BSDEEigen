@@ -1,20 +1,20 @@
 {
   "eqn_config": {
-    "eqn_name": "Sdg3Eigen",
+    "eqn_name": "Sdg2Eigen",
     "total_time": 0.3,
-    "dim": 5,
-    "num_time_interval": 40,
+    "dim": 10,
+    "num_time_interval": 120,
     "initeigen_low": -0.2,
     "initeigen_high": -0.2
   },
   "nn_config": {
     "trig_order": 3,
-    "num_hiddens": [50, 50, 50],
+    "num_hiddens": [200, 200, 200],
     "lr_values": [1e-4, 5e-5, 1e-5],
-    "lr_boundaries": [20000, 40000],
+    "lr_boundaries": [30000, 50000],
     "ma_values": [0.2, 0.9, 0.99],
-    "ma_boundaries": [20000, 40000],
-    "num_iterations": 50000,
+    "ma_boundaries": [30000, 50000],
+    "num_iterations": 60000,
     "batch_size": 1024,
     "valid_size": 1024,
     "logging_frequency": 100,

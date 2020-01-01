@@ -645,7 +645,7 @@ class FeedForwardModel(object):
             yl2_batch = tf.reduce_mean(y_init ** 2)
             yl2_ma = tf.get_variable(
                 'yl2_ma', [1], TF_DTYPE,
-                initializer=tf.constant_initializer(10.0, TF_DTYPE),
+                initializer=tf.constant_initializer(100.0, TF_DTYPE),
                 trainable=False)
             yl2 = decay * yl2_ma + (1 - decay) * yl2_batch
             true_z = self.bsde.true_z(x_init)
@@ -674,7 +674,8 @@ class FeedForwardModel(object):
             # use linear approximation outside the clipped range
             self.train_loss = tf.reduce_mean(
                 tf.where(tf.abs(delta) < DELTA_CLIP, tf.square(delta),
-                         2 * DELTA_CLIP * tf.abs(delta) - DELTA_CLIP ** 2)) * 100 
+                         2 * DELTA_CLIP * tf.abs(delta) - DELTA_CLIP ** 2)) * 1000 + \
+                tf.nn.relu(2 - yl2) * 100
             self.extra_train_ops.append(
                 moving_averages.assign_moving_average(yl2_ma, yl2_batch, decay))
             y_hist = net_y(self.x_hist, need_grad=False, reuse=True)
