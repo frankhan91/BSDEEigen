@@ -1,6 +1,6 @@
 {
   "eqn_config": {
-    "eqn_name": "Sdg2Eigen",
+    "eqn_name": "Sdg_d10Eigen",
     "total_time": 0.3,
     "dim": 10,
     "num_time_interval": 120,
