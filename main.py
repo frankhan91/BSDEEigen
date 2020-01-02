@@ -9,9 +9,9 @@ from solver import FeedForwardModel
 import matplotlib.pyplot as plt
 
 FLAGS = tf.app.flags.FLAGS
-tf.app.flags.DEFINE_string('config_path', './configs/Sdg3_ma.json',
+tf.app.flags.DEFINE_string('config_path', './configs/CubicNew_d10.json',
                            """The path to load json file.""")
-tf.app.flags.DEFINE_string('exp_name', 'sdg_d5',
+tf.app.flags.DEFINE_string('exp_name', 'CubicNew_d10',
                            """The name of numerical experiments.""")
 tf.app.flags.DEFINE_integer('num_run', 1,
                             """The number of experiments to repeatedly run for the same problem.""")
@@ -22,12 +22,6 @@ tf.app.flags.DEFINE_string('log_dir', './logs',
 def main():
     config = get_config(FLAGS.config_path)
     bsde = getattr(eqn, config.eqn_config.eqn_name)(config.eqn_config)
-    dim = config.eqn_config.dim
-    T = config.eqn_config.total_time
-    i = config.eqn_config.num_time_interval
-    NN_size = config.nn_config.num_hiddens
-    l = len(NN_size)
-
     if not os.path.exists(FLAGS.log_dir):
         os.mkdir(FLAGS.log_dir)
     path_prefix = os.path.join(FLAGS.log_dir, FLAGS.exp_name)
@@ -41,15 +35,19 @@ def main():
         with tf.Session() as sess:
             logging.info('Begin to solve %s with run %d' % (FLAGS.exp_name, idx_run))
             model = FeedForwardModel(config, bsde, sess)
-            model.build_ma()
+            #model.build_linear_consist()
+            model.build_nonlinear_consist()
+            #model.build_linear_grad()
+            #model.build_nonlinear_grad()
+            #model.build_true()
             result = model.train()
             training_history = result[0]
             # save training history
-            np.savetxt('{}_log{}_{}d,i{},T{},N{}x{}.csv'.format(path_prefix, idx_run,dim,i,T,l,NN_size[0]),
+            np.savetxt('{}_log{}.csv'.format(path_prefix, idx_run),
                        training_history,
-                       fmt=['%d', '%.5e', '%.5e', '%.5e', '%.5e', '%.5e', '%.5e', '%.5e', '%d'],
+                       fmt=['%d', '%.5e', '%.5e', '%.5e', '%.5e', '%.5e', '%.5e', '%d'],
                        delimiter=",",
-                       header="step,train_loss, eigen_error, init_rel_loss, grad_error, NN_consist,eqn_error ,l2, elapsed_time",
+                       header="step,train_loss, eigen_error, init_rel_loss, grad_error, NN_consist,l2, elapsed_time",
                        comments='')
             # y_hist_NN = result[1]
             # y_hist_true = result[2]
@@ -59,6 +57,7 @@ def main():
             # print(np.histogram(y_hist_NN))
             # plt.hist(y_hist_true, bins='auto')
             # plt.hist(result[1], bins='auto')
+
 
 if __name__ == '__main__':
     main()
