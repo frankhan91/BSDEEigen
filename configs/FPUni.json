@@ -13,6 +13,8 @@
     "num_hiddens": [30, 30, 30],
     "lr_values": [1e-3, 1e-4, 1e-5],
     "lr_boundaries": [4000, 5000],
+    "ma_values": [0, 0],
+    "ma_boundaries": [0],
     "num_iterations": 6000,
     "batch_size": 256,
     "valid_size": 256,
