@@ -1,6 +1,6 @@
 {
   "eqn_config": {
-    "eqn_name": "SchrodingerEigen",
+    "eqn_name": "Sdg_d2secondEigen",
     "total_time": 0.2,
     "dim": 2,
     "num_time_interval": 40,
