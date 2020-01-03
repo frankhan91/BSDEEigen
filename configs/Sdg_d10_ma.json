@@ -9,7 +9,7 @@
   },
   "nn_config": {
     "trig_order": 3,
-    "num_hiddens": [200, 200, 200],
+    "num_hiddens": [300, 300, 300],
     "lr_values": [1e-4, 5e-5, 1e-5],
     "lr_boundaries": [30000, 50000],
     "ma_values": [0.2, 0.9, 0.99],

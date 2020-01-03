@@ -9,9 +9,9 @@ from solver import FeedForwardModel
 import matplotlib.pyplot as plt
 
 FLAGS = tf.app.flags.FLAGS
-tf.app.flags.DEFINE_string('config_path', './configs/CubicNew_d10.json',
+tf.app.flags.DEFINE_string('config_path', './configs/Sdg_d5_ma.json',
                            """The path to load json file.""")
-tf.app.flags.DEFINE_string('exp_name', 'CubicNew_d10',
+tf.app.flags.DEFINE_string('exp_name', 'sdg_d5',
                            """The name of numerical experiments.""")
 tf.app.flags.DEFINE_integer('num_run', 1,
                             """The number of experiments to repeatedly run for the same problem.""")
@@ -35,8 +35,8 @@ def main():
         with tf.Session() as sess:
             logging.info('Begin to solve %s with run %d' % (FLAGS.exp_name, idx_run))
             model = FeedForwardModel(config, bsde, sess)
-            #model.build_linear_consist()
-            model.build_nonlinear_consist()
+            model.build_linear_consist()
+            # model.build_nonlinear_consist()
             #model.build_linear_grad()
             #model.build_nonlinear_grad()
             #model.build_true()
