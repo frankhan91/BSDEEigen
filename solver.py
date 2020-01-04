@@ -282,8 +282,8 @@ class FeedForwardModel(object):
             # use linear approximation outside the clipped range
             self.train_loss = tf.reduce_mean(
                 tf.where(tf.abs(delta) < DELTA_CLIP, tf.square(delta),
-                         2 * DELTA_CLIP * tf.abs(delta) - DELTA_CLIP ** 2)) * 100 \
-                    + tf.nn.relu(0.2 - yl2) * 100
+                         2 * DELTA_CLIP * tf.abs(delta) - DELTA_CLIP ** 2)) * 1000 \
+                    + tf.nn.relu(2 - yl2) * 100
             self.extra_train_ops.append(
                 moving_averages.assign_moving_average(yl2_ma, yl2_batch, decay))
             y_hist = net_y(self.x_hist, need_grad=False, reuse=True)
@@ -336,13 +336,14 @@ class FeedForwardModel(object):
                 initializer=tf.constant_initializer(100.0, TF_DTYPE),
                 trainable=False)
             yl2 = decay * yl2_ma + (1 - decay) * yl2_batch
-            true_z = self.bsde.true_z(x_init)
             sign = tf.sign(tf.reduce_sum(y_init))
-            error_z = z - true_z
-            #self.y_init = y_init
-            y = y_init
-            y = y * sign / tf.sqrt(yl2) * self.bsde.L2mean
+            y = y_init * sign / tf.sqrt(yl2) * self.bsde.L2mean
             y = tf.clip_by_value(y, -5, 5, name=None)
+            z = z * sign / tf.sqrt(yl2) * self.bsde.L2mean
+            true_z = self.bsde.true_z(x_init)
+            normed_true_z = true_z / tf.sqrt(tf.reduce_mean(true_z ** 2))
+            error_z = z / tf.sqrt(tf.reduce_mean(z ** 2)) - normed_true_z
+
             for t in range(0, self.num_time_interval - 1):
                 y = y - self.bsde.delta_t * (
                     self.bsde.f_tf(self.x[:, :, t], y, z) + self.eigen * y) + \
