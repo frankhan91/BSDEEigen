@@ -118,7 +118,7 @@ class FeedForwardModel(object):
             self.train_loss = tf.reduce_mean(
                 tf.where(tf.abs(delta) < DELTA_CLIP, tf.square(delta),
                          2 * DELTA_CLIP * tf.abs(delta) - DELTA_CLIP ** 2)) * 1000 \
-                    + tf.reduce_mean(tf.square(NN_consist)) * 0\
+                    + tf.reduce_mean(tf.square(NN_consist)) * 20\
                     + tf.nn.relu(2 - yl2) * 100
             self.extra_train_ops.append(
                 moving_averages.assign_moving_average(yl2_ma, yl2_batch, decay))
@@ -200,7 +200,7 @@ class FeedForwardModel(object):
             self.train_loss = \
                 tf.reduce_mean(tf.where(tf.abs(delta) < DELTA_CLIP, tf.square(delta),
                          2 * DELTA_CLIP * tf.abs(delta) - DELTA_CLIP ** 2)) * 100 \
-                + tf.reduce_mean(tf.square(NN_consist)) * 0\
+                + tf.reduce_mean(tf.square(NN_consist)) * 20\
                 + tf.nn.relu(2 * self.bsde.L2mean - yl2) * 100
 
             self.extra_train_ops.append(
