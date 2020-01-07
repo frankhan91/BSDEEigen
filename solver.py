@@ -99,8 +99,18 @@ class FeedForwardModel(object):
             error_z = z / tf.sqrt(tf.reduce_mean(z ** 2)) - normed_true_z
             y_init = y_init / tf.sqrt(yl2) * sign
             grad_y = grad_y * sign / tf.sqrt(yl2)
-            NN_consist = z_init - grad_y
-            #self.y_init = y_init
+            NN_consist_0 = z_init - grad_y
+            
+            x_T = self.x[:, :, -1]
+            z_T = net_z(x_T, need_grad=False)
+            yT_and_gradient = net_y(x_T,need_grad=True)
+            grad_yT = yT_and_gradient[1]
+            grad_yT = grad_yT * sign / tf.sqrt(yl2)
+            NN_consist_T = z_T - grad_yT
+            
+            #NN_consist = NN_consist_0
+            NN_consist = NN_consist_T
+            
             y = y_init
             
             for t in range(0, self.num_time_interval-1):
@@ -177,8 +187,18 @@ class FeedForwardModel(object):
             true_z = self.bsde.true_z(x_init)
             sign = tf.sign(tf.reduce_sum(y_init))
             error_z = z - true_z
-            NN_consist = z - grad_y * sign / tf.sqrt(yl2) * self.bsde.L2mean
-            #self.y_init = y_init
+            NN_consist_0 = z - grad_y * sign / tf.sqrt(yl2) * self.bsde.L2mean
+            
+            x_T = self.x[:, :, -1]
+            z_T = net_z(x_T, need_grad=False)
+            yT_and_gradient = net_y(x_T,need_grad=True)
+            grad_yT = yT_and_gradient[1]
+            grad_yT = grad_yT * sign / tf.sqrt(yl2) * self.bsde.L2mean
+            NN_consist_T = z_T - grad_yT
+            
+            #NN_consist = NN_consist_0
+            NN_consist = NN_consist_T
+            
             y = y_init
             y = y * sign / tf.sqrt(yl2) * self.bsde.L2mean
             y = tf.clip_by_value(y, -5, 5, name=None)
