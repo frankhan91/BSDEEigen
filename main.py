@@ -37,9 +37,9 @@ def main():
             model = FeedForwardModel(config, bsde, sess)
             model.build_linear_consist()
             # model.build_nonlinear_consist()
-            #model.build_linear_grad()
-            #model.build_nonlinear_grad()
-            #model.build_true()
+            # model.build_linear_grad()
+            # model.build_nonlinear_grad()
+            # model.build_true()
             result = model.train()
             training_history = result[0]
             # save training history
@@ -49,10 +49,9 @@ def main():
                        delimiter=",",
                        header="step,train_loss, eigen_error, init_rel_loss, grad_error, NN_consist,l2, elapsed_time",
                        comments='')
-            # y_hist_NN = result[1]
-            # y_hist_true = result[2]
-            # np.savetxt('{}HistTruey.txt'.format(path_prefix),y_hist_true)
-            # np.savetxt('{}HistNN.txt'.format(path_prefix),y_hist_NN)
+            y_hist = result[1]
+            np.savetxt('{}_hist.csv'.format(path_prefix), y_hist, delimiter=",",
+                       header="y_hist_true,y_hist_NN", comments='')
             # print(np.histogram(y_hist_true))
             # print(np.histogram(y_hist_NN))
             # plt.hist(y_hist_true, bins='auto')

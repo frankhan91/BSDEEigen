@@ -65,8 +65,8 @@ class FeedForwardModel(object):
             if step == self.nn_config.num_iterations:
                 x_hist = self.bsde.sample_hist(self.hist_size)
                 feed_dict_hist = {self.x_hist: x_hist}
-                [y_hist, y_true] = self.sess.run([self.hist_NN, self.hist_true], feed_dict=feed_dict_hist)
-        return np.array(training_history), y_hist, y_true
+                [y_hist_true, y_hist] = self.sess.run([self.hist_true, self.hist_NN], feed_dict=feed_dict_hist)
+        return np.array(training_history), np.concatenate([y_hist_true, y_hist], axis=1)
 
     def build_linear_consist(self):
         start_time = time.time()
