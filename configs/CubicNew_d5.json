@@ -11,7 +11,7 @@
     "initeigen_high": -3.5
   },
   "nn_config": {
-    "trig_order": 3,
+    "trig_order": 5,
     "num_hiddens": [80, 80, 80],
     "lr_values": [1e-4, 1e-5],
     "lr_boundaries": [40000],
