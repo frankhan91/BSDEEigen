@@ -48,7 +48,7 @@ class FeedForwardModel(object):
         # begin sgd iteration
         for step in range(self.nn_config.num_iterations+1):
             if step % self.nn_config.logging_frequency == 0:
-                train_loss, eigen_error, init_rel_loss, grad_error, NN_consist,l2 = self.sess.run(
+                train_loss, eigen_error, init_rel_loss, grad_error, NN_consist, l2 = self.sess.run(
                     [self.train_loss, self.eigen_error, self.init_rel_loss, self.grad_error, self.NN_consist, self.l2],
                     feed_dict=feed_dict_valid)
                 elapsed_time = time.time()-start_time+self.t_build
@@ -78,8 +78,10 @@ class FeedForwardModel(object):
                 global_step, self.nn_config.ma_boundaries,
                 [tf.constant(ma, dtype=TF_DTYPE) for ma in self.nn_config.ma_values])
             x_init = self.x[:, :, 0]
-            net_y = PeriodNet(self.nn_config.num_hiddens, out_dim=1, name='net_y')
-            net_z = PeriodNet(self.nn_config.num_hiddens, out_dim=self.dim, name='net_z')
+            net_y = PeriodNet(self.nn_config.num_hiddens, out_dim=1,
+                              trig_order=self.nn_config.trig_order, name='net_y')
+            net_z = PeriodNet(self.nn_config.num_hiddens, out_dim=self.dim,
+                              trig_order=self.nn_config.trig_order, name='net_z')
             y_init_and_gradient = net_y(x_init,need_grad=True)
             y_init = y_init_and_gradient[0]
             grad_y = y_init_and_gradient[1]
@@ -171,8 +173,10 @@ class FeedForwardModel(object):
                 global_step, self.nn_config.ma_boundaries,
                 [tf.constant(ma, dtype=TF_DTYPE) for ma in self.nn_config.ma_values])
             x_init = self.x[:, :, 0]
-            net_y = PeriodNet(self.nn_config.num_hiddens, out_dim=1, name='net_y')
-            net_z = PeriodNet(self.nn_config.num_hiddens, out_dim=self.dim, name='net_z')
+            net_y = PeriodNet(self.nn_config.num_hiddens, out_dim=1,
+                              trig_order=self.nn_config.trig_order, name='net_y')
+            net_z = PeriodNet(self.nn_config.num_hiddens, out_dim=self.dim,
+                              trig_order=self.nn_config.trig_order, name='net_z')
             y_init_and_gradient = net_y(x_init, need_grad=True)
             y_init = y_init_and_gradient[0]
             grad_y = y_init_and_gradient[1]
@@ -266,7 +270,8 @@ class FeedForwardModel(object):
                 global_step, self.nn_config.ma_boundaries,
                 [tf.constant(ma, dtype=TF_DTYPE) for ma in self.nn_config.ma_values])
             x_init = self.x[:, :, 0]
-            net_y = PeriodNet(self.nn_config.num_hiddens, out_dim=1, name='net_y')
+            net_y = PeriodNet(self.nn_config.num_hiddens, out_dim=1,
+                              trig_order=self.nn_config.trig_order, name='net_y')
             y_init_and_gradient = net_y(x_init,need_grad=True)
             y_init = y_init_and_gradient[0]
             z = y_init_and_gradient[1]
@@ -345,7 +350,8 @@ class FeedForwardModel(object):
                 global_step, self.nn_config.ma_boundaries,
                 [tf.constant(ma, dtype=TF_DTYPE) for ma in self.nn_config.ma_values])
             x_init = self.x[:, :, 0]
-            net_y = PeriodNet(self.nn_config.num_hiddens, out_dim=1, name='net_y')
+            net_y = PeriodNet(self.nn_config.num_hiddens, out_dim=1,
+                              trig_order=self.nn_config.trig_order, name='net_y')
             y_init_and_gradient = net_y(x_init, need_grad=True)
             y_init = y_init_and_gradient[0]
             z = y_init_and_gradient[1]
@@ -472,20 +478,18 @@ class FeedForwardModel(object):
         self.train_ops = tf.group(*all_ops)
         self.t_build = time.time() - start_time
         
-    
-
 
 class PeriodNet(object):
-    def __init__(self, num_hiddens, out_dim, name='period_net'):
+    def __init__(self, num_hiddens, out_dim, trig_order, name='period_net'):
         self.num_hiddens = num_hiddens
         self.out_dim = out_dim
+        self.trig_order = trig_order
         self.name = name
 
     def __call__(self, x, need_grad, reuse=tf.AUTO_REUSE):
-        dim = x.get_shape()[-1]
         with tf.variable_scope(self.name):
             trig_bases = []
-            for i in range(dim+1):
+            for i in range(1, self.trig_order+1):
                 trig_bases += [tf.sin(i * x), tf.cos(i * x)]
             trig_bases = tf.concat(trig_bases, axis=1)
             h = trig_bases

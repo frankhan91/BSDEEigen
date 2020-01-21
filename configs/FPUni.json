@@ -9,7 +9,7 @@
     "coef":[1.0, 1.0]
   },
   "nn_config": {
-    "trig_order": 3,
+    "trig_order": 5,
     "num_hiddens": [30, 30, 30],
     "lr_values": [1e-3, 1e-4, 1e-5],
     "lr_boundaries": [4000, 5000],
