@@ -1,0 +1,25 @@
+{
+  "eqn_config": {
+    "eqn_name": "FPUniEigen",
+    "total_time": 0.2,
+    "dim": 15,
+    "num_time_interval": 120,
+    "initeigen_low": 0.3,
+    "initeigen_high": 0.3,
+    "coef":[0.1, 0.3, 0.2, 0.5, 0.2, 0.1, 0.3, 0.4, 0.2, 0.2, 0.1, 0.2, 0.2, 0.3, 0.3]
+  },
+  "nn_config": {
+    "trig_order": 4,
+    "num_hiddens": [300, 300, 300],
+    "lr_values": [1e-4, 5e-5, 1e-5],
+    "lr_boundaries": [60000, 90000],
+    "ma_values": [0.2, 0.9, 0.99],
+    "ma_boundaries": [60000, 90000],
+    "num_iterations": 100000,
+    "batch_size": 1024,
+    "valid_size": 1024,
+    "logging_frequency": 100,
+    "verbose": "True"
+  }
+}
+
