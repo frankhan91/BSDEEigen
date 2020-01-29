@@ -24,6 +24,7 @@ class FeedForwardModel(object):
         self.extra_train_ops = []
         self.dw = tf.placeholder(TF_DTYPE, [None, self.dim, self.num_time_interval], name='dW')
         self.x = tf.placeholder(TF_DTYPE, [None, self.dim, self.num_time_interval + 1], name='X')
+        self.is_training = tf.placeholder(tf.bool)
         self.train_loss, self.eigen_error, self.init_rel_loss, self.NN_consist,self.l2 = None, None, None, None, None
         self.train_ops, self.t_build = None, None
         self.eigen = tf.get_variable('eigen', shape=[1], dtype=TF_DTYPE,
@@ -42,7 +43,7 @@ class FeedForwardModel(object):
         dw_valid, x_valid = self.bsde.sample_uniform(self.nn_config.valid_size)
         #dw_valid, x_valid = self.bsde.sample(self.nn_config.valid_size)
         # can still use batch norm of samples in the validation phase
-        feed_dict_valid = {self.dw: dw_valid, self.x: x_valid}
+        feed_dict_valid = {self.dw: dw_valid, self.x: x_valid, self.is_training: False}
         # initialization
         self.sess.run(tf.global_variables_initializer())
         # begin sgd iteration
@@ -60,8 +61,9 @@ class FeedForwardModel(object):
                         "init_rel_loss: %.4e,   elapsed time %3u" % (
                          init_rel_loss, elapsed_time))
             dw_train, x_train = self.bsde.sample_uniform(self.nn_config.batch_size)
-            #dw_train, x_train = self.bsde.sample(self.nn_config.batch_size)
-            self.sess.run(self.train_ops, feed_dict={self.dw: dw_train, self.x: x_train})
+            # dw_train, x_train = self.bsde.sample(self.nn_config.batch_size)
+            self.sess.run(self.train_ops,
+                          feed_dict={self.dw: dw_train, self.x: x_train, self.is_training: True})
             if step == self.nn_config.num_iterations:
                 x_hist = self.bsde.sample_hist(self.hist_size)
                 feed_dict_hist = {self.x_hist: x_hist}
@@ -93,7 +95,9 @@ class FeedForwardModel(object):
                 'yl2_ma', [1], TF_DTYPE,
                 initializer=tf.constant_initializer(100.0, TF_DTYPE),
                 trainable=False)
-            yl2 = decay * yl2_ma + (1 - decay) * yl2_batch
+            yl2 = tf.cond(self.is_training,
+                          lambda: decay * yl2_ma + (1 - decay) * yl2_batch,
+                          lambda: yl2_ma)
             true_z = self.bsde.true_z(x_init)
             
             sign = tf.sign(tf.reduce_sum(y_init))
@@ -187,7 +191,9 @@ class FeedForwardModel(object):
                 'yl2_ma', [1], TF_DTYPE,
                 initializer=tf.constant_initializer(100.0, TF_DTYPE),
                 trainable=False)
-            yl2 = decay * yl2_ma + (1 - decay) * yl2_batch
+            yl2 = tf.cond(self.is_training,
+                          lambda: decay * yl2_ma + (1 - decay) * yl2_batch,
+                          lambda: yl2_ma)
             true_z = self.bsde.true_z(x_init)
             sign = tf.sign(tf.reduce_sum(y_init))
             error_z = z - true_z
@@ -281,7 +287,9 @@ class FeedForwardModel(object):
                 'yl2_ma', [1], TF_DTYPE,
                 initializer=tf.constant_initializer(100.0, TF_DTYPE),
                 trainable=False)
-            yl2 = decay * yl2_ma + (1 - decay) * yl2_batch
+            yl2 = tf.cond(self.is_training,
+                          lambda: decay * yl2_ma + (1 - decay) * yl2_batch,
+                          lambda: yl2_ma)
             
             true_z = self.bsde.true_z(x_init)
             sign = tf.sign(tf.reduce_sum(y_init))
@@ -361,7 +369,9 @@ class FeedForwardModel(object):
                 'yl2_ma', [1], TF_DTYPE,
                 initializer=tf.constant_initializer(100.0, TF_DTYPE),
                 trainable=False)
-            yl2 = decay * yl2_ma + (1 - decay) * yl2_batch
+            yl2 = tf.cond(self.is_training,
+                          lambda: decay * yl2_ma + (1 - decay) * yl2_batch,
+                          lambda: yl2_ma)
             sign = tf.sign(tf.reduce_sum(y_init))
             y = y_init * sign / tf.sqrt(yl2) * self.bsde.L2mean
             y = tf.clip_by_value(y, -5, 5, name=None)
