@@ -214,6 +214,62 @@ class Sdg_d5Eigen(Equation):
         return - y * bases_sin / bases_cos * self.sigma
 
 
+class Sdg_d2Eigen(Equation):
+    # Schrodinger V(x)= \sum_{i=1}^d ci*cos(xi) on squares [0, 2pi]^d ci~[0,0.2]
+    def __init__(self, eqn_config):
+        super(Sdg_d2Eigen, self).__init__(eqn_config)
+        self.N = 10
+        self.sigma = np.sqrt(2.0)
+        self.ci = [0.814723686393179,0.905791937075619]
+        self.sup = [1.56400342750522,1.59706136953917]
+        self.coef = [[0.904929598872363, 0.892479070097153],
+                     [-0.599085866194182, -0.634418280724547],
+                     [0.0573984887007387, 0.0668213136994578],
+                     [-0.00252519085534048, -0.00325082263430659],
+                     [6.32514967687960e-05, 9.02475797129487e-05],
+                     [-1.01983519526066e-06, -1.61448458844806e-06],
+                     [1.14553116486126e-08, 2.01332109031048e-08],
+                     [-9.47170798515555e-11, -1.84883101478958e-10],
+                     [6.00357997713989e-13, 1.30180750716843e-12],
+                     [-3.00925873281827e-15, -7.24995760563704e-15]]
+        self.coef2 = [[0, 0],
+                      [-0.599085866194182, -0.634418280724547],
+                      [0.114796977401477, 0.133642627398916],
+                      [-0.00757557256602144, -0.00975246790291976],
+                      [0.000253005987075184, 0.000360990318851795],
+                      [-5.09917597630331e-06, -8.07242294224032e-06],
+                      [6.87318698916753e-08, 1.20799265418629e-07],
+                      [-6.63019558960889e-10, -1.29418171035271e-09],
+                      [4.80286398171191e-12, 1.04144600573475e-11],
+                      [-2.70833285953644e-14, -6.52496184507333e-14]]
+        self.true_eigen = -0.591624518674115
+
+    def f_tf(self, x, y, z):
+        return -tf.reduce_sum(self.ci * tf.cos(x), axis=1, keepdims=True) *y
+       
+    def true_y_np(self,x):
+        bases_cos = 0 * x
+        for m in range(self.N):
+            bases_cos = bases_cos + np.cos(m * x) * self.coef[m]  # Broadcasting
+        return np.prod(bases_cos, axis=1, keepdims=True)
+    
+    def true_y(self, x):
+        bases_cos = 0 * x
+        for m in range(self.N):
+            bases_cos = bases_cos + tf.cos(m * x) * self.coef[m] #Broadcasting
+        return tf.reduce_prod(bases_cos, axis=1, keepdims=True)
+    
+    def true_z(self, x):
+        bases_cos = 0
+        for m in range(self.N):
+            bases_cos = bases_cos + tf.cos(m * x) * self.coef[m] #Broadcasting
+        bases_sin = 0
+        for m in range(self.N):
+            bases_sin = bases_sin + tf.sin(m * x) * self.coef2[m] #Broadcasting
+        y = tf.reduce_prod(bases_cos, axis=1, keepdims=True)
+        return - y * bases_sin / bases_cos * self.sigma
+
+
 class Sdg_d2secondEigen(Equation):
     # Schrodinger V(x)= \sum_{i=1}^2 ci*cos(xi) on squares [0, 2pi]^d
     # d=2 the second smallest eigenvalue,the initialization should be 0
@@ -270,26 +326,25 @@ class Sdg_d2secondEigen(Equation):
         return -tf.reduce_sum(self.ci * tf.cos(x), axis=1, keepdims=True) *y
 
     def true_y(self, x):
-        shapex = tf.shape(x)
-        phi1 = 0 * x[:,0]
-        phi2 = 0 * x[:,1]
+        #shapex = tf.shape(x)
+        phi1 = 0 * x[:,0:1]
+        phi2 = 0 * x[:,1:2]
         for m in range(self.N):
-            phi1 = phi1 + tf.sin(m * x[:,0]) * self.coef11[m] 
-            phi2 = phi2 + tf.cos(m * x[:,0]) * self.coef12[m]
-        temp = phi1 * phi2
-        return tf.reshape(temp,[shapex[0],1])
+            phi1 = phi1 + tf.sin(m * x[:,0:1]) * self.coef11[m] 
+            phi2 = phi2 + tf.cos(m * x[:,1:2]) * self.coef12[m]
+        return phi1 * phi2
     
     def true_z(self, x):
-        phi1 = 0 * x[:,0]
-        phi2 = 0 * x[:,1]
-        dphi1 = 0 * x
-        dphi2 = 0 * x
+        phi1 = 0 * x[:,0:1]
+        phi2 = 0 * x[:,1:2]
+        dphi1 = 0 * x[:,0:1]
+        dphi2 = 0 * x[:,1:2]
         for m in range(self.N):
-            phi1 = phi1 + tf.sin(m * x[:,0]) * self.coef11[m] 
-            phi2 = phi2 + tf.cos(m * x[:,1]) * self.coef12[m]
-            dphi1 = dphi1 + tf.cos(m * x[:,0]) * self.coef21[m]
-            dphi2 = dphi2 + tf.sin(m * x[:,1]) * self.coef22[m]
-        return phi1 * dphi2 + phi2 * dphi1
+            phi1 = phi1 + tf.sin(m * x[:,0:1]) * self.coef11[m] 
+            phi2 = phi2 + tf.cos(m * x[:,1:2]) * self.coef12[m]
+            dphi1 = dphi1 + tf.cos(m * x[:,0:1]) * self.coef21[m]
+            dphi2 = dphi2 - tf.sin(m * x[:,1:2]) * self.coef22[m]
+        return tf.concat([phi1 * dphi2, phi2 * dphi1], axis=1)
     
     
 class CubicNewEigen(Equation):
