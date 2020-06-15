@@ -1,0 +1,23 @@
+{
+  "eqn_config": {
+    "eqn_name": "DoubleWell_d1Eigen",
+    "total_time": 0.2,
+    "dim": 1,
+    "num_time_interval": 80,
+    "initeigen_low": -0.12,
+    "initeigen_high": -0.12
+  },
+  "nn_config": {
+    "trig_order": 5,
+    "num_hiddens": [30, 30],
+    "lr_values": [1e-3, 1e-3, 1e-4],
+    "lr_boundaries": [1000,3000],
+    "ma_values": [0, 0],
+    "ma_boundaries": [2000],
+    "num_iterations": 3000,
+    "batch_size": 256,
+    "valid_size": 256,
+    "logging_frequency": 100,
+    "verbose": "True"
+  }
+}
