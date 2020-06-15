@@ -1,8 +1,11 @@
 import logging
 import time
 import numpy as np
-import tensorflow as tf
+#import tensorflow as tf
 from tensorflow.python.training import moving_averages
+
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 
 TF_DTYPE = tf.float64
 DELTA_CLIP = 100.0
@@ -26,13 +29,17 @@ class FeedForwardModel(object):
         self.x = tf.placeholder(TF_DTYPE, [None, self.dim, self.num_time_interval + 1], name='X')
         self.is_training = tf.placeholder(tf.bool)
         self.train_loss, self.eigen_error, self.init_rel_loss, self.NN_consist,self.l2 = None, None, None, None, None
+        self.init_infty_loss = None
         self.train_ops, self.t_build = None, None
+        self.train_ops0, self.train_ops1 = None, None
         self.eigen = tf.get_variable('eigen', shape=[1], dtype=TF_DTYPE,
-                                     initializer=tf.random_uniform_initializer(self.eqn_config.initeigen_low, self.eqn_config.initeigen_high),
-                                     trainable=True)
+                                      initializer=tf.random_uniform_initializer(self.eqn_config.initeigen_low, self.eqn_config.initeigen_high),
+                                      trainable=True)
+        #self.eigen = tf.constant(-2.531567563305872515, dtype=TF_DTYPE)
         self.x_hist = tf.placeholder(TF_DTYPE, [None, self.dim], name='x_hist')
         self.hist_NN = None
         self.hist_true = None
+        self.y_second = None
         self.hist_size = 20000
     
     def train(self):
@@ -49,26 +56,180 @@ class FeedForwardModel(object):
         # begin sgd iteration
         for step in range(self.nn_config.num_iterations+1):
             if step % self.nn_config.logging_frequency == 0:
-                train_loss, eigen_error, init_rel_loss, grad_error, NN_consist, l2 = self.sess.run(
-                    [self.train_loss, self.eigen_error, self.init_rel_loss, self.grad_error, self.NN_consist, self.l2],
+                train_loss, eigen_error, init_rel_loss, grad_error, NN_consist, l2, init_infty_loss = self.sess.run(
+                    [self.train_loss, self.eigen_error, self.init_rel_loss, self.grad_error, self.NN_consist, self.l2, self.init_infty_loss],
                     feed_dict=feed_dict_valid)
                 elapsed_time = time.time()-start_time+self.t_build
-                training_history.append([step, train_loss, eigen_error, init_rel_loss, grad_error,NN_consist, l2, elapsed_time])
+                training_history.append([step, train_loss, eigen_error, init_rel_loss, init_infty_loss, grad_error,NN_consist, l2, elapsed_time])
                 if self.nn_config.verbose:
                     logging.info(
                         "step: %5u,    train_loss: %.4e,   eigen_error: %.4e, grad_error: %.4e, NN_consist: %.4e, l2: %.4e " % (
                             step, train_loss, eigen_error, grad_error, NN_consist, l2) +
-                        "init_rel_loss: %.4e,   elapsed time %3u" % (
-                         init_rel_loss, elapsed_time))
+                        "init_rel_loss: %.4e, init_infty_loss: %.4e,  elapsed time %3u" % (
+                         init_rel_loss, init_infty_loss, elapsed_time))
             dw_train, x_train = self.bsde.sample_uniform(self.nn_config.batch_size)
             # dw_train, x_train = self.bsde.sample(self.nn_config.batch_size)
-            self.sess.run(self.train_ops,
-                          feed_dict={self.dw: dw_train, self.x: x_train, self.is_training: True})
+            if step < 1000:
+                self.sess.run(self.train_ops,
+                              feed_dict={self.dw: dw_train, self.x: x_train, self.is_training: True})
+            else:
+                self.sess.run(self.train_ops,
+                              feed_dict={self.dw: dw_train, self.x: x_train, self.is_training: True})
             if step == self.nn_config.num_iterations:
                 x_hist = self.bsde.sample_hist(self.hist_size)
                 feed_dict_hist = {self.x_hist: x_hist}
-                [y_hist_true, y_hist] = self.sess.run([self.hist_true, self.hist_NN], feed_dict=feed_dict_hist)
-        return np.array(training_history), np.concatenate([y_hist_true, y_hist], axis=1)
+                #[y_hist_true, y_hist] = self.sess.run([self.hist_true, self.hist_NN], feed_dict=feed_dict_hist)
+                [y_hist_true, y_hist, y_second] = self.sess.run([self.hist_true, self.hist_NN, self.y_second], feed_dict=feed_dict_hist)
+        #return np.array(training_history), np.concatenate([y_hist_true, y_hist], axis=1)
+        return np.array(training_history), x_hist, y_hist_true, y_hist, y_second
+
+    def build_double_well(self):
+        start_time = time.time()
+        with tf.variable_scope('forward'):
+            global_step = tf.get_variable('global_step', [],
+                                          initializer=tf.constant_initializer(0),
+                                          trainable=False, dtype=tf.int32)
+            decay = tf.train.piecewise_constant(
+                global_step, self.nn_config.ma_boundaries,
+                [tf.constant(ma, dtype=TF_DTYPE) for ma in self.nn_config.ma_values])
+            x_init = self.x[:, :, 0]
+            net_y = PeriodNet(self.nn_config.num_hiddens, out_dim=1,
+                              trig_order=self.nn_config.trig_order, name='net_y')
+            net_z = PeriodNet(self.nn_config.num_hiddens, out_dim=self.dim,
+                              trig_order=self.nn_config.trig_order, name='net_z')
+            y_init_and_gradient = net_y(x_init,need_grad=True)
+            y_init = y_init_and_gradient[0]
+            grad_y = y_init_and_gradient[1]
+            z = net_z(x_init, need_grad=False)
+            z_init = z
+            
+            yl2_batch = tf.reduce_mean(y_init ** 2)
+            # yl2_ma = tf.get_variable(
+            #     'yl2_ma', [1], TF_DTYPE,
+            #     initializer=tf.constant_initializer(100.0, TF_DTYPE),
+            #     trainable=False)
+            # yl2 = tf.cond(self.is_training,
+            #               lambda: decay * yl2_ma + (1 - decay) * yl2_batch,
+            #               lambda: yl2_ma)
+            yl2 = yl2_batch
+            true_z = self.bsde.true_z(x_init)
+            
+            second_z = self.bsde.second_z(x_init)
+            normed_second_z = second_z / tf.sqrt(tf.reduce_mean(second_z ** 2))
+            error_second_z = z / tf.sqrt(tf.reduce_mean(z ** 2)) - normed_second_z
+            
+            sign = tf.sign(tf.reduce_sum(y_init))
+            normed_true_z = true_z / tf.sqrt(tf.reduce_mean(true_z ** 2))
+            error_z = z / tf.sqrt(tf.reduce_mean(z ** 2)) - normed_true_z
+            y_init = y_init / tf.sqrt(yl2) * sign
+            grad_y = grad_y * sign / tf.sqrt(yl2)
+            # y_init = y_init / tf.sqrt(yl2)
+            # grad_y = grad_y / tf.sqrt(yl2)
+            NN_consist_0 = z_init - grad_y
+            
+            x_T = self.x[:, :, -1]
+            z_T = net_z(x_T, need_grad=False)
+            yT_and_gradient = net_y(x_T,need_grad=True)
+            grad_yT = yT_and_gradient[1]
+            grad_yT = grad_yT * sign / tf.sqrt(yl2)
+            NN_consist_T = z_T - grad_yT
+            
+            #NN_consist = NN_consist_0
+            NN_consist = NN_consist_T
+            
+            y = y_init
+            for t in range(0, self.num_time_interval-1):
+                y = y - self.bsde.delta_t * (self.bsde.f_tf(self.x[:, :, t], y, z) + self.eigen *y) + \
+                    tf.reduce_sum(z * self.dw[:, :, t], 1, keepdims=True)
+                z = net_z(self.x[:, :, t + 1], need_grad=False, reuse=True)
+            # terminal time
+            y = y - self.bsde.delta_t * (self.bsde.f_tf(self.x[:, :, -2], y, z) + self.eigen *y) + \
+                tf.reduce_sum(z * self.dw[:, :, -1], 1, keepdims=True)
+            y_xT = net_y(self.x[:, :, -1], need_grad=False, reuse=True)
+            y_xT = y_xT / tf.sqrt(yl2) * sign
+            delta = y - y_xT
+            
+            #temporarily construct a build_true
+            # y = self.bsde.true_y(self.x[:, :, 0])
+            # zz = self.bsde.true_z(self.x[:,:,0])
+            # for t in range(0, self.num_time_interval-1):
+            #     y = y - self.bsde.delta_t * (self.bsde.f_tf(self.x[:, :, t], y, zz) + self.eigen *y) + \
+            #         tf.reduce_sum(zz * self.dw[:, :, t], 1, keepdims=True)
+            #     zz = self.bsde.true_z(self.x[:, :, t + 1])
+            # # terminal time
+            # y = y - self.bsde.delta_t * (self.bsde.f_tf(self.x[:, :, -2], y, zz) + self.eigen *y) + \
+            #     tf.reduce_sum(zz * self.dw[:, :, -1], 1, keepdims=True)
+            # y_xT = self.bsde.true_y(self.x[:, :, -1])
+            # y_xT = y_xT
+            # delta = y - y_xT
+            
+            # use linear approximation outside the clipped range
+            self.train_loss0 = tf.reduce_mean((y_init_and_gradient[0] - self.bsde.second_y(x_init))**2)\
+                + tf.reduce_mean((z_init - self.bsde.second_z(x_init))**2) + (self.eigen - self.bsde.second_eigen)**2
+            self.train_loss1 = tf.reduce_mean((y_init_and_gradient[0] - self.bsde.second_y_approx(x_init))**2)\
+                + tf.reduce_mean((z_init - self.bsde.second_z_approx(x_init))**2)# + (self.eigen - self.bsde.second_eigen)**2
+            self.train_loss = tf.reduce_mean(
+                tf.where(tf.abs(delta) < DELTA_CLIP, tf.square(delta),
+                         2 * DELTA_CLIP * tf.abs(delta) - DELTA_CLIP ** 2)) * 1000 #\
+                    #+ tf.reduce_mean(tf.square(NN_consist)) * 20\
+                    #+ tf.nn.relu(2 - yl2) * 100
+            #self.extra_train_ops.append(
+            #    moving_averages.assign_moving_average(yl2_ma, yl2_batch, decay))
+            y_hist = net_y(self.x_hist, need_grad=False, reuse=True)
+            #hist_sign = tf.sign(tf.reduce_sum(y_hist))
+            hist_l2 = tf.reduce_mean(y_hist ** 2)
+            self.hist_NN = y_hist / tf.sqrt(hist_l2)# * hist_sign
+            hist_true_y = self.bsde.true_y(self.x_hist)
+            self.hist_true = hist_true_y / tf.sqrt(tf.reduce_mean(hist_true_y ** 2))
+            y_second = self.bsde.second_y(self.x_hist)
+            self.y_second = y_second / tf.sqrt(tf.reduce_mean(y_second ** 2))
+        true_init = self.bsde.true_y(self.x[:, :, 0])
+        true_init = true_init / tf.sqrt(tf.reduce_mean(true_init ** 2))
+        error_y = y_init - true_init
+        second_init = self.bsde.second_y(self.x[:, :, 0])
+        second_init = second_init / tf.sqrt(tf.reduce_mean(second_init ** 2))
+        self.init_rel_loss = tf.sqrt(tf.reduce_mean(error_y ** 2))
+        self.init_infty_loss = tf.reduce_max(tf.abs(error_y))
+        self.eigen_error = self.eigen - self.bsde.true_eigen
+        
+        self.l2 = yl2
+        #self.l2 = tf.sqrt(tf.reduce_mean(error_second_z ** 2))
+        # use the following to value to mark the error from second eigenfunction
+        error_y1 = y_init - second_init
+        #error_y2 = y_init + second_init
+        error_y2 = y_init + true_init
+        self.grad_error = tf.sqrt(tf.reduce_mean(error_z ** 2))
+        self.NN_consist = tf.sqrt(tf.reduce_mean(NN_consist ** 2))
+        #self.grad_error = tf.sqrt(tf.reduce_mean(error_y1 ** 2))
+        #self.NN_consist = tf.sqrt(tf.reduce_mean(error_y1 ** 2))
+        
+        # train operations
+        learning_rate = tf.train.piecewise_constant(global_step,
+                                                    self.nn_config.lr_boundaries,
+                                                    self.nn_config.lr_values)
+        trainable_variables = tf.trainable_variables()
+        grads = tf.gradients(self.train_loss, trainable_variables)
+        optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
+        apply_op = optimizer.apply_gradients(zip(grads, trainable_variables),
+                                             global_step=global_step, name='train_step')
+        all_ops = [apply_op] + self.extra_train_ops
+        self.train_ops = tf.group(*all_ops)
+        
+        grads0 = tf.gradients(self.train_loss0, trainable_variables)
+        optimizer0 = tf.train.AdamOptimizer(learning_rate=learning_rate)
+        apply_op0 = optimizer0.apply_gradients(zip(grads0, trainable_variables),
+                                             global_step=global_step, name='train_step')
+        all_ops0 = [apply_op0] + self.extra_train_ops
+        self.train_ops0 = tf.group(*all_ops0)
+        
+        grads1 = tf.gradients(self.train_loss1, trainable_variables)
+        optimizer1 = tf.train.AdamOptimizer(learning_rate=learning_rate)
+        apply_op1 = optimizer1.apply_gradients(zip(grads1, trainable_variables),
+                                             global_step=global_step, name='train_step')
+        all_ops1 = [apply_op1] + self.extra_train_ops
+        self.train_ops1 = tf.group(*all_ops1)
+        
+        self.t_build = time.time() - start_time
 
     def build_linear_consist(self):
         start_time = time.time()
@@ -148,6 +309,7 @@ class FeedForwardModel(object):
         true_init = true_init / tf.sqrt(tf.reduce_mean(true_init ** 2))
         error_y = y_init - true_init
         self.init_rel_loss = tf.sqrt(tf.reduce_mean(error_y ** 2))
+        self.init_infty_loss = tf.reduce_max(tf.abs(error_y))
         self.eigen_error = self.eigen - self.bsde.true_eigen
         self.l2 = yl2
         self.grad_error = tf.sqrt(tf.reduce_mean(error_z ** 2))
@@ -243,11 +405,10 @@ class FeedForwardModel(object):
             self.hist_true = hist_true_y / tf.sqrt(tf.reduce_mean(hist_true_y ** 2))
 
         true_init = self.bsde.true_y(self.x[:, :, 0])
-        rel_err = tf.reduce_mean(tf.square(
-            y_init / tf.sqrt(yl2) * sign * self.bsde.L2mean - true_init)) / tf.reduce_mean(
-            tf.square(true_init))
+        error_y = y_init / tf.sqrt(yl2) * sign * self.bsde.L2mean - true_init
+        rel_err = tf.reduce_mean(tf.square(error_y)) / tf.reduce_mean(tf.square(true_init))
         self.init_rel_loss = tf.sqrt(rel_err)
-
+        self.init_infty_loss = tf.reduce_max(tf.abs(error_y))
         self.eigen_error = self.eigen - self.bsde.true_eigen
         self.l2 = yl2
         self.grad_error = tf.sqrt(tf.reduce_mean(error_z ** 2) / tf.reduce_mean(true_z ** 2))
@@ -329,6 +490,7 @@ class FeedForwardModel(object):
         true_init = true_init / tf.sqrt(tf.reduce_mean(true_init ** 2))
         error_y = y_init - true_init
         self.init_rel_loss = tf.sqrt(tf.reduce_mean(error_y ** 2))
+        self.init_infty_loss = tf.reduce_max(tf.abs(error_y))
         self.eigen_error = self.eigen - self.bsde.true_eigen
         self.l2 = yl2
         self.grad_error = tf.sqrt(tf.reduce_mean(error_z ** 2))
@@ -411,11 +573,10 @@ class FeedForwardModel(object):
             self.hist_true = hist_true_y / tf.sqrt(tf.reduce_mean(hist_true_y ** 2))
 
         true_init = self.bsde.true_y(self.x[:, :, 0])
-        rel_err = tf.reduce_mean(tf.square(
-            y_init / tf.sqrt(yl2) * sign * self.bsde.L2mean - true_init)) / tf.reduce_mean(
-            tf.square(true_init))
+        error_y = y_init / tf.sqrt(yl2) * sign * self.bsde.L2mean - true_init
+        rel_err = tf.reduce_mean(tf.square(error_y)) / tf.reduce_mean(tf.square(true_init))
         self.init_rel_loss = tf.sqrt(rel_err)
-
+        self.init_infty_loss = tf.reduce_max(tf.abs(error_y))
         self.eigen_error = self.eigen - self.bsde.true_eigen
         self.l2 = yl2
         self.grad_error = tf.sqrt(tf.reduce_mean(error_z ** 2) / tf.reduce_mean(true_z ** 2))
@@ -467,6 +628,7 @@ class FeedForwardModel(object):
             self.hist_true = hist_true_y / tf.sqrt(tf.reduce_mean(hist_true_y ** 2))
             self.hist_NN = self.hist_true
         self.init_rel_loss = self._init_coef_y -1
+        self.init_infty_loss = self._init_coef_y -1
         self.eigen_error = self.eigen - self.bsde.true_eigen
         self.l2 = yl2
         self.grad_error = self._init_coef_z -1
