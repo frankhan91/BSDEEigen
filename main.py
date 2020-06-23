@@ -12,9 +12,9 @@ import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
 
 FLAGS = tf.app.flags.FLAGS
-tf.app.flags.DEFINE_string('config_path', './configs/DoubleWell_d1.json',
+tf.app.flags.DEFINE_string('config_path', './configs/DoubleWell_d5.json',
                            """The path to load json file.""")
-tf.app.flags.DEFINE_string('exp_name', 'DoubleWell_d1',
+tf.app.flags.DEFINE_string('exp_name', 'DoubleWell_d5',
                            """The name of numerical experiments.""")
 tf.app.flags.DEFINE_integer('num_run', 1,
                             """The number of experiments to repeatedly run for the same problem.""")
@@ -54,9 +54,13 @@ def main():
                        delimiter=",",
                        header="step,train_loss, eigen_error, init_rel_loss, init_infty_loss, grad_error, NN_consist,l2, elapsed_time",
                        comments='')
-            #y_hist = result[1]
+            # for high dim
             # np.savetxt('{}_hist.csv'.format(path_prefix), y_hist, delimiter=",",
             #            header="y_hist_true,y_hist_NN", comments='')
+            # for 1d
+            #print(np.shape(x_hist), np.shape(y_hist), np.shape(np.concatenate((x_hist,y_hist),axis=1)), np.shape(training_history))
+            np.savetxt('{}_hist.csv'.format(path_prefix),np.concatenate((x_hist,y_hist,y_hist_true,y_second),axis=1), delimiter=",",
+                        header="x1_plot,x2_plot,y_plot,y_true,y_true_second", comments='')
             # f = plt.figure()
             # ax1 = f.add_subplot(111)
             # ax1.plot(x_hist,y_hist,'ro',label='NN')
@@ -65,7 +69,7 @@ def main():
             # ax3 = f.add_subplot(111)
             # ax3.plot(x_hist,y_second,'go', label='second')
             
-            #plt.hist(y_hist_true, bins='auto')
+            plt.hist(y_hist_true, bins='auto')
 
 if __name__ == '__main__':
     main()

@@ -428,10 +428,10 @@ class DoubleWell_d1Eigen(Equation):
     
     def second_y_approx(self, x):
         # you can choose whatever function you like as initialization
-        bases_sin = 0 * x
-        for m in range(1):
-            bases_sin = bases_sin + tf.sin((2*m+1) * x) * self.coef1[m]
-        return 0.5-0.1*tf.cos(2*x) + tf.sin(x)#bases_sin + 1 #0.3 * tf.sin(2*x)
+        # bases_sin = 0 * x
+        # for m in range(1):
+        #     bases_sin = bases_sin + tf.sin((2*m+1) * x) * self.coef1[m]
+        return 0.3*self.true_y(x) + 3*self.second_y(x)
     
     def true_z(self, x):
         bases_sin = 0
@@ -447,11 +447,11 @@ class DoubleWell_d1Eigen(Equation):
     
     def second_z_approx(self, x):
         # set as the gradient of second_y_approx
-        bases_cos = 0 * x
-        for m in range(1):
-            bases_cos = bases_cos + (2*m+1) * tf.cos((2*m+1) *x) * self.coef1[m]
+        # bases_cos = 0 * x
+        # for m in range(1):
+        #     bases_cos = bases_cos + (2*m+1) * tf.cos((2*m+1) *x) * self.coef1[m]
         #return bases_cos * self.sigma + 0#0.6*tf.cos(2*x) * self.sigma
-        return self.sigma * (0.2*tf.sin(2*x) + tf.cos(x))
+        return 0.3*self.true_z(x) + 3*self.second_z(x)
 
 
 class DoubleWell2_d1Eigen(Equation):
@@ -501,10 +501,10 @@ class DoubleWell2_d1Eigen(Equation):
     
     def second_y_approx(self, x):
         # you can choose whatever function you like as initialization
-        bases_sin = 0 * x
-        for m in range(1):
-            bases_sin = bases_sin + tf.sin((2*m+1) * x) * self.coef1[m]
-        return bases_sin
+        # bases_sin = 0 * x
+        # for m in range(1):
+        #     bases_sin = bases_sin + tf.sin((2*m+1) * x) * self.coef1[m]
+        return 0.3*self.true_y(x) + 3*self.second_y(x)
     
     def true_z(self, x):
         bases_sin = 0
@@ -520,10 +520,10 @@ class DoubleWell2_d1Eigen(Equation):
     
     def second_z_approx(self, x):
         # set as the gradient of second_y_approx
-        bases_cos = 0 * x
-        for m in range(1):
-            bases_cos = bases_cos + (2*m+1) * tf.cos((2*m+1) *x) * self.coef1[m]
-        return bases_cos * self.sigma
+        # bases_cos = 0 * x
+        # for m in range(1):
+        #     bases_cos = bases_cos + (2*m+1) * tf.cos((2*m+1) *x) * self.coef1[m]
+        return 0.3*self.true_z(x) + 3*self.second_z(x)
 
     
 class DoubleWell_d2Eigen(Equation):
@@ -578,7 +578,7 @@ class DoubleWell_d2Eigen(Equation):
 
     def second_y_approx(self, x):
         # you can choose whatever function you like as initialization
-        return 0.2*self.true_y(x) + self.second_y(x)
+        return 0.3*self.true_y(x) + 3*self.second_y(x)
     
     def true_z(self, x):
         y1 = 0 * x[:,0:1]
@@ -606,7 +606,7 @@ class DoubleWell_d2Eigen(Equation):
     
     def second_z_approx(self, x):
         # set as the gradient of second_y_approx
-        return 0.2*self.true_z(x) + self.second_z(x)
+        return 0.3*self.true_z(x) + 3*self.second_z(x)
 
     
 class DoubleWell2_d2Eigen(Equation):
@@ -661,7 +661,7 @@ class DoubleWell2_d2Eigen(Equation):
 
     def second_y_approx(self, x):
         # you can choose whatever function you like as initialization
-        return 0.2*self.true_y(x) + self.second_y(x)
+        return 0.3*self.true_y(x) + 3*self.second_y(x)
     
     def true_z(self, x):
         y1 = 0 * x[:,0:1]
@@ -689,7 +689,7 @@ class DoubleWell2_d2Eigen(Equation):
     
     def second_z_approx(self, x):
         # set as the gradient of second_y_approx
-        return 0.2*self.true_z(x) + self.second_z(x)
+        return 0.3*self.true_z(x) + 3*self.second_z(x)
 
     
 class DoubleWell_d5Eigen(Equation):
