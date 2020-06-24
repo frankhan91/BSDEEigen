@@ -29,7 +29,7 @@ class FeedForwardModel(object):
         self.x = tf.placeholder(TF_DTYPE, [None, self.dim, self.num_time_interval + 1], name='X')
         self.is_training = tf.placeholder(tf.bool)
         self.train_loss, self.eigen_error, self.init_rel_loss, self.NN_consist,self.l2 = None, None, None, None, None
-        self.init_infty_loss = None
+        self.init_infty_loss, self.grad_infty_loss = None, None
         self.train_ops, self.t_build = None, None
         self.train_ops0, self.train_ops1 = None, None
         self.eigen = tf.get_variable('eigen', shape=[1], dtype=TF_DTYPE,
@@ -56,17 +56,17 @@ class FeedForwardModel(object):
         # begin sgd iteration
         for step in range(self.nn_config.num_iterations+1):
             if step % self.nn_config.logging_frequency == 0:
-                train_loss, eigen_error, init_rel_loss, grad_error, NN_consist, l2, init_infty_loss = self.sess.run(
-                    [self.train_loss, self.eigen_error, self.init_rel_loss, self.grad_error, self.NN_consist, self.l2, self.init_infty_loss],
+                train_loss, eigen_error, init_rel_loss, grad_error, NN_consist, l2, init_infty_loss, grad_infty_loss = self.sess.run(
+                    [self.train_loss, self.eigen_error, self.init_rel_loss, self.grad_error, self.NN_consist, self.l2, self.init_infty_loss, self.grad_infty_loss],
                     feed_dict=feed_dict_valid)
                 elapsed_time = time.time()-start_time+self.t_build
-                training_history.append([step, train_loss, eigen_error, init_rel_loss, init_infty_loss, grad_error,NN_consist, l2, elapsed_time])
+                training_history.append([step, train_loss, eigen_error, init_rel_loss, init_infty_loss, grad_error, grad_infty_loss, NN_consist, l2, elapsed_time])
                 if self.nn_config.verbose:
                     logging.info(
                         "step: %5u,    train_loss: %.4e,   eigen_error: %.4e, grad_error: %.4e, NN_consist: %.4e, l2: %.4e " % (
                             step, train_loss, eigen_error, grad_error, NN_consist, l2) +
-                        "init_rel_loss: %.4e, init_infty_loss: %.4e,  elapsed time %3u" % (
-                         init_rel_loss, init_infty_loss, elapsed_time))
+                        "init_rel_loss: %.4e, init_infty_loss: %.4e, grad_infty_loss: %.4e, elapsed time %3u" % (
+                         init_rel_loss, init_infty_loss, grad_infty_loss, elapsed_time))
             dw_train, x_train = self.bsde.sample_uniform(self.nn_config.batch_size)
             # dw_train, x_train = self.bsde.sample(self.nn_config.batch_size)
             if step < 1000:
@@ -78,10 +78,10 @@ class FeedForwardModel(object):
             if step == self.nn_config.num_iterations:
                 x_hist = self.bsde.sample_hist(self.hist_size)
                 feed_dict_hist = {self.x_hist: x_hist}
-                #[y_hist_true, y_hist] = self.sess.run([self.hist_true, self.hist_NN], feed_dict=feed_dict_hist)
-                [y_hist_true, y_hist, y_second] = self.sess.run([self.hist_true, self.hist_NN, self.y_second], feed_dict=feed_dict_hist)
-        #return np.array(training_history), np.concatenate([y_hist_true, y_hist], axis=1)
-        return np.array(training_history), x_hist, y_hist_true, y_hist, y_second
+                [y_hist_true, y_hist] = self.sess.run([self.hist_true, self.hist_NN], feed_dict=feed_dict_hist)
+                #[y_hist_true, y_hist, y_second] = self.sess.run([self.hist_true, self.hist_NN, self.y_second], feed_dict=feed_dict_hist)
+        return np.array(training_history), np.concatenate([y_hist_true, y_hist], axis=1)
+        #return np.array(training_history), x_hist, y_hist_true, y_hist, y_second
 
     def build_double_well(self):
         start_time = time.time()
@@ -179,6 +179,7 @@ class FeedForwardModel(object):
         self.init_infty_loss = tf.reduce_max(tf.abs(error_y))
         self.l2 = yl2
         self.grad_error = tf.sqrt(tf.reduce_mean(error_z ** 2))
+        self.grad_infty_loss = tf.reduce_max(tf.abs(error_z))
         self.NN_consist = tf.sqrt(tf.reduce_mean(NN_consist ** 2))
         # for second state
         # second_init = self.bsde.second_y(self.x[:, :, 0])
@@ -189,6 +190,7 @@ class FeedForwardModel(object):
         # self.init_infty_loss = tf.reduce_max(tf.abs(error_y_second))
         # self.l2 = yl2
         # self.grad_error = tf.sqrt(tf.reduce_mean(error_second_z ** 2))
+        # self.grad_infty_loss = tf.reduce_max(tf.abs(error_second_z))
         # self.NN_consist = tf.sqrt(tf.reduce_mean(NN_consist ** 2))
         
         # train operations
@@ -301,6 +303,7 @@ class FeedForwardModel(object):
         self.eigen_error = self.eigen - self.bsde.true_eigen
         self.l2 = yl2
         self.grad_error = tf.sqrt(tf.reduce_mean(error_z ** 2))
+        self.grad_infty_loss = tf.reduce_max(tf.abs(error_z))
         self.NN_consist = tf.sqrt(tf.reduce_mean(NN_consist ** 2))
         
         # train operations
@@ -396,10 +399,11 @@ class FeedForwardModel(object):
         error_y = y_init / tf.sqrt(yl2) * sign * self.bsde.L2mean - true_init
         rel_err = tf.reduce_mean(tf.square(error_y)) / tf.reduce_mean(tf.square(true_init))
         self.init_rel_loss = tf.sqrt(rel_err)
-        self.init_infty_loss = tf.reduce_max(tf.abs(error_y))
+        self.init_infty_loss = tf.reduce_max(tf.abs(error_y)) / tf.sqrt(tf.reduce_mean(tf.square(true_init)))
         self.eigen_error = self.eigen - self.bsde.true_eigen
         self.l2 = yl2
         self.grad_error = tf.sqrt(tf.reduce_mean(error_z ** 2) / tf.reduce_mean(true_z ** 2))
+        self.grad_infty_loss = tf.reduce_max(tf.abs(error_z)) / tf.sqrt(tf.reduce_mean(tf.square(true_z)))
         self.NN_consist = tf.sqrt(tf.reduce_mean(NN_consist ** 2))
 
         learning_rate = tf.train.piecewise_constant(global_step,
@@ -482,6 +486,7 @@ class FeedForwardModel(object):
         self.eigen_error = self.eigen - self.bsde.true_eigen
         self.l2 = yl2
         self.grad_error = tf.sqrt(tf.reduce_mean(error_z ** 2))
+        self.grad_infty_loss = tf.reduce_max(tf.abs(error_z))
         self.NN_consist = tf.constant(0)
         
         # train operations
@@ -564,10 +569,11 @@ class FeedForwardModel(object):
         error_y = y_init / tf.sqrt(yl2) * sign * self.bsde.L2mean - true_init
         rel_err = tf.reduce_mean(tf.square(error_y)) / tf.reduce_mean(tf.square(true_init))
         self.init_rel_loss = tf.sqrt(rel_err)
-        self.init_infty_loss = tf.reduce_max(tf.abs(error_y))
+        self.init_infty_loss = tf.reduce_max(tf.abs(error_y)) / tf.sqrt(tf.reduce_mean(tf.square(true_init)))
         self.eigen_error = self.eigen - self.bsde.true_eigen
         self.l2 = yl2
         self.grad_error = tf.sqrt(tf.reduce_mean(error_z ** 2) / tf.reduce_mean(true_z ** 2))
+        self.grad_infty_loss = tf.reduce_max(tf.abs(error_z)) / tf.sqrt(tf.reduce_mean(tf.square(true_z)))
         self.NN_consist = tf.constant(0)
 
         learning_rate = tf.train.piecewise_constant(global_step,
@@ -620,6 +626,7 @@ class FeedForwardModel(object):
         self.eigen_error = self.eigen - self.bsde.true_eigen
         self.l2 = yl2
         self.grad_error = self._init_coef_z -1
+        self.grad_infty_loss = self._init_coef_z -1
         self.NN_consist = tf.constant(0)
         # train operations
         global_step = tf.get_variable('global_step', [],
