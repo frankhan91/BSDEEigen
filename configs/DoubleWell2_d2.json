@@ -18,6 +18,6 @@
     "batch_size": 1024,
     "valid_size": 1024,
     "logging_frequency": 100,
-    "verbose": "True"
+    "verbose": true
   }
 }

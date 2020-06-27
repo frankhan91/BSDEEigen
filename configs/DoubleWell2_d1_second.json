@@ -5,7 +5,8 @@
     "dim": 1,
     "num_time_interval": 160,
     "initeigen_low": -2.3,
-    "initeigen_high": -2.2
+    "initeigen_high": -2.2,
+    "second": "degenerate"
   },
   "nn_config": {
     "trig_order": 5,
@@ -18,6 +19,6 @@
     "batch_size": 512,
     "valid_size": 512,
     "logging_frequency": 100,
-    "verbose": "True"
+    "verbose": true
   }
 }
