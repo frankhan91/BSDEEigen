@@ -651,11 +651,11 @@ class FeedForwardModel(object):
         # both true_y and true_z are multiplied by trainable constant
         start_time = time.time()
         self._init_coef_y = tf.get_variable(
-            'init_coef_y', [1], TF_DTYPE, initializer=tf.constant_initializer(0.8, TF_DTYPE),
-            trainable=True)
+            'init_coef_y', [1], TF_DTYPE, initializer=tf.constant_initializer(1.0, TF_DTYPE),
+            trainable=False)
         self._init_coef_z = tf.get_variable(
-            'init_coef_z', [1], TF_DTYPE, initializer=tf.constant_initializer(0.8, TF_DTYPE),
-            trainable=True)
+            'init_coef_z', [1], TF_DTYPE, initializer=tf.constant_initializer(1.0, TF_DTYPE),
+            trainable=False)
         with tf.variable_scope('forward'):
             x_init = self.x[:, :, 0]
             y_init = self.bsde.true_y(x_init) * self._init_coef_y

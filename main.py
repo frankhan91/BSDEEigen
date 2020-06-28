@@ -12,9 +12,9 @@ import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
 
 FLAGS = tf.app.flags.FLAGS
-tf.app.flags.DEFINE_string('config_path', './configs/DoubleWell2_d1_second.json',
+tf.app.flags.DEFINE_string('config_path', './configs/DoubleWell_d5_second.json',
                            """The path to load json file.""")
-tf.app.flags.DEFINE_string('exp_name', 'DoubleWell_d1_second',
+tf.app.flags.DEFINE_string('exp_name', 'DoubleWell_d5_second',
                            """The name of numerical experiments.""")
 tf.app.flags.DEFINE_integer('num_run', 1,
                             """The number of experiments to repeatedly run for the same problem.""")
@@ -44,8 +44,8 @@ def main():
             # model.build_nonlinear_consist()
             # model.build_linear_grad()
             # model.build_nonlinear_grad()
-            # model.build_true()
-            model.build_double_well()
+            model.build_true()
+            # model.build_double_well()
             result = model.train()
             training_history = result[0]
             # save training history
