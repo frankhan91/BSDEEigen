@@ -44,8 +44,8 @@ def main():
             # model.build_nonlinear_consist()
             # model.build_linear_grad()
             # model.build_nonlinear_grad()
-            model.build_true()
-            # model.build_double_well()
+            # model.build_true()
+            model.build_double_well()
             result = model.train()
             training_history = result[0]
             # save training history
