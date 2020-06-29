@@ -4,8 +4,8 @@
     "total_time": 0.2,
     "dim": 5,
     "num_time_interval": 160,
-    "initeigen_low": -0.3,
-    "initeigen_high": -0.3
+    "initeigen_low": -0.5,
+    "initeigen_high": -0.5
   },
   "nn_config": {
     "trig_order": 5,
