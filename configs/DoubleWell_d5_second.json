@@ -1,11 +1,11 @@
 {
   "eqn_config": {
-    "eqn_name": "DoubleWell_d5Eigen",
+    "eqn_name": "DoubleWell_dHighEigen",
     "total_time": 0.2,
     "dim": 5,
     "num_time_interval": 160,
-    "initeigen_low": -0.1,
-    "initeigen_high": 0,
+    "initeigen_low": 0.16,
+    "initeigen_high": 0.17,
     "second": 16000
   },
   "nn_config": {
