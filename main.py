@@ -12,9 +12,9 @@ import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
 
 FLAGS = tf.app.flags.FLAGS
-tf.app.flags.DEFINE_string('config_path', './configs/DoubleWell_d5_second.json',
+tf.app.flags.DEFINE_string('config_path', './configs/DoubleWell_d5.json',
                            """The path to load json file.""")
-tf.app.flags.DEFINE_string('exp_name', 'DoubleWell_d5_second',
+tf.app.flags.DEFINE_string('exp_name', 'DoubleWell_d5',
                            """The name of numerical experiments.""")
 tf.app.flags.DEFINE_integer('num_run', 1,
                             """The number of experiments to repeatedly run for the same problem.""")
@@ -74,7 +74,7 @@ def main():
             # ax3 = f.add_subplot(111)
             # ax3.plot(x_hist,y_second,'go', label='second')
             
-            #plt.hist(y_hist_true, bins='auto')
+            # plt.hist(figure_data[:,1], bins='auto')
 
 if __name__ == '__main__':
     main()

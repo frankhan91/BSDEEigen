@@ -31,11 +31,10 @@ class FeedForwardModel(object):
         self.train_loss, self.eigen_error, self.init_rel_loss, self.NN_consist,self.l2 = None, None, None, None, None
         self.init_infty_loss, self.grad_infty_loss = None, None
         self.train_ops, self.t_build = None, None
-        self.train_ops0, self.train_ops1, self.train_ops2 = None, None, None
+        self.train_ops_supervise, self.train_ops_supervise_approx, self.train_ops_fixEigen = None, None, None
         self.eigen = tf.get_variable('eigen', shape=[1], dtype=TF_DTYPE,
                                       initializer=tf.random_uniform_initializer(self.eqn_config.initeigen_low, self.eqn_config.initeigen_high),
                                       trainable=True)
-        #self.eigen = tf.constant(-2.531567563305872515, dtype=TF_DTYPE)
         self.x_hist = tf.placeholder(TF_DTYPE, [None, self.dim], name='x_hist')
         self.hist_NN = None
         self.hist_true = None
@@ -44,6 +43,7 @@ class FeedForwardModel(object):
         self.second = False
         if hasattr(config.eqn_config, 'second'):
             self.second = True
+            print("second")
     
     def train(self):
         start_time = time.time()
@@ -76,12 +76,12 @@ class FeedForwardModel(object):
             if self.second:
                 if self.eqn_config.second == "degenerate":
                     if step < 1000:
-                        self.sess.run(self.train_ops1,feed_dict={self.dw: dw_train, self.x: x_train, self.is_training: True})
+                        self.sess.run(self.train_ops_supervise_approx,feed_dict={self.dw: dw_train, self.x: x_train, self.is_training: True})
                     else:
                         self.sess.run(self.train_ops,feed_dict={self.dw: dw_train, self.x: x_train, self.is_training: True})
                 else: #self.eqn_config.second marks the step to change loss function
                     if step < self.eqn_config.second:
-                        self.sess.run(self.train_ops2,feed_dict={self.dw: dw_train, self.x: x_train, self.is_training: True})
+                        self.sess.run(self.train_ops_fixEigen,feed_dict={self.dw: dw_train, self.x: x_train, self.is_training: True})
                     else:
                         self.sess.run(self.train_ops,feed_dict={self.dw: dw_train, self.x: x_train, self.is_training: True})
             else:
@@ -261,21 +261,21 @@ class FeedForwardModel(object):
         apply_op0 = optimizer0.apply_gradients(zip(grads0, trainable_variables),
                                              global_step=global_step, name='train_step')
         all_ops0 = [apply_op0] + self.extra_train_ops
-        self.train_ops0 = tf.group(*all_ops0)
+        self.train_ops_supervise = tf.group(*all_ops0)
         
         grads1 = tf.gradients(self.train_loss1, trainable_variables)
         optimizer1 = tf.train.AdamOptimizer(learning_rate=learning_rate)
         apply_op1 = optimizer1.apply_gradients(zip(grads1, trainable_variables),
                                              global_step=global_step, name='train_step')
         all_ops1 = [apply_op1] + self.extra_train_ops
-        self.train_ops1 = tf.group(*all_ops1)
+        self.train_ops_supervise_approx = tf.group(*all_ops1)
         
         grads2 = tf.gradients(self.train_loss2, trainable_variables)
         optimizer2 = tf.train.AdamOptimizer(learning_rate=learning_rate)
         apply_op2 = optimizer2.apply_gradients(zip(grads2, trainable_variables),
                                              global_step=global_step, name='train_step')
         all_ops2 = [apply_op2] + self.extra_train_ops
-        self.train_ops2 = tf.group(*all_ops2)
+        self.train_ops_fixEigen = tf.group(*all_ops2)
         
         self.t_build = time.time() - start_time
 

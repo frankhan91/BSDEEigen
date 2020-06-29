@@ -760,7 +760,86 @@ class DoubleWell_d5Eigen(Equation):
             y2 = y2 + tf.cos(2 * m * x[:,1:5]) * self.coef0[m][1:5]
             dy1 = dy1 + (2*m+1) * tf.cos((2*m+1) * x[:,0:1]) * self.coef1[m]
             dy2 = dy2 - 2*m * tf.sin(2*m * x[:,1:5]) * self.coef0[m][1:5]
-        y = tf.reduce_sum(y2, axis=1, keepdims=True) * y1
+        y = tf.reduce_prod(y2, axis=1, keepdims=True) * y1
+        yy = tf.concat([y1,y2],1) # expand y
+        zz = tf.concat([dy1,dy2],1) # expand z
+        return y * zz / yy
+    
+    def second_z_approx(self, x):
+        # set as the gradient of second_y_approx
+        return 0.3*self.true_z(x) + 3*self.second_z(x)
+    
+class DoubleWell_dHighEigen(Equation):
+    #well-separate Schrodinger high dim
+    def __init__(self, eqn_config):
+        super(DoubleWell_dHighEigen, self).__init__(eqn_config)
+        self.N = 10
+        self.sigma = np.sqrt(2.0)
+        self.A = np.concatenate(([1.5],0.2*np.ones(self.dim-1)))
+        self.true_eigen = -0.2658780338622622197 - 0.004994543800531658917 * (self.dim-1)
+        self.second_eigen = 0.1860163214034415979 - 0.004994543800531658917 * (self.dim-1)
+        # coef0 is coef for ground eigenfunction in d1: 1, cos2x, cos4x...
+        self.coef0 = [4.849638936137847245e-01,-1.719216620376243232e-01,
+                      7.934668280954022823e-03,-1.641332919106110351e-04,
+                      1.915646686059286880e-06,-1.432980906804100879e-08,
+                      7.449835308605464979e-11,-2.846866874407665454e-13,
+                      8.247577849078903519e-16,-1.840772951476521254e-18]
+        # coef1 is coef for second eigenfunction in d1: sinx, sin3x, sin5x...  
+        self.coef1 = [7.045452301176932108e-01,-6.010586074745370710e-02,
+                      1.817537370379718794e-03,-2.792944433460181340e-05,
+                      2.592161556682200467e-07,-1.609229933303384171e-09,
+                      7.149528211141171171e-12,-2.385168629168197918e-14,
+                      6.193904135450362291e-17,-1.287490135293999248e-19]
+        # coef2 is coef for ground eigenfunction in other dim: 1, cos2x, cos4x...
+        self.coef2 = [4.996884608914199388e-01,-2.495715904542338340e-02,
+                      1.559362739878917203e-04,-4.330981093820056683e-07,
+                      6.766640464567428604e-10,-6.766307217324653586e-13,
+                      4.698663151849139795e-16,-2.397216509273572312e-19,
+                      9.363952505944370821e-23,3.060820295240397227e-26]
+        # coef3 is to put coef0 and coef2s together, this is not a list
+        self.coef3 = np.concatenate([np.reshape(self.coef0,[self.N,1]), np.repeat(np.reshape(self.coef2,[self.N,1]), self.dim-1, axis=1)],axis=1)
+    
+    def f_tf(self, x, y, z):
+        return - y * tf.reduce_sum(self.A * tf.cos(2*x), axis=1, keepdims=True)
+    
+    def true_y(self, x):
+        bases_cos = x*0
+        for m in range(self.N):
+            bases_cos = bases_cos + tf.cos(2*m*x) * self.coef3[m,:] #broadcast
+        return tf.reduce_prod(bases_cos, axis=1, keepdims=True)
+    
+    def second_y(self, x):
+        bases_cos = x[:,1:self.dim]*0
+        bases_sin = x[:,0:1]*0
+        for m in range(self.N):
+            bases_cos = bases_cos + tf.cos(2*m*x[:,1:self.dim]) * self.coef3[m,1:self.dim] #broadcast
+            bases_sin = bases_sin + tf.sin((2*m+1) * x[:,0:1]) * self.coef1[m]
+        return tf.reduce_prod(bases_cos, axis=1, keepdims=True) * bases_sin
+
+    def second_y_approx(self, x):
+        # you can choose whatever function you like as initialization
+        return 0.3*self.true_y(x) + 3*self.second_y(x)
+    
+    def true_z(self, x):
+        bases_cos = 0 * x
+        bases_sin = 0 * x
+        for m in range(self.N):
+            bases_cos = bases_cos + tf.cos(2*m*x) * self.coef3[m,:]
+            bases_sin = bases_sin - 2 * m * tf.sin(2*m*x) * self.coef3[m,:]
+        y = tf.reduce_prod(bases_cos, axis=1, keepdims=True)
+        return self.sigma * y * bases_sin / bases_cos
+    
+    def second_z(self, x):
+        y1 = 0 * x[:,0:1]
+        y2 = 0 * x[:,1:self.dim]
+        dy1 = 0 * x[:,0:1]
+        dy2 = 0 * x[:,1:self.dim]
+        for m in range(self.N):
+            y1 = y1 + tf.sin((2*m+1) * x[:,0:1]) * self.coef1[m]
+            y2 = y2 + tf.cos(2 * m * x[:,1:self.dim]) * self.coef3[m,1:self.dim]
+            dy1 = dy1 + (2*m+1) * tf.cos((2*m+1) * x[:,0:1]) * self.coef1[m]
+            dy2 = dy2 - 2*m * tf.sin(2*m * x[:,1:self.dim]) * self.coef3[m,1:self.dim]
+        y = tf.reduce_prod(y2, axis=1, keepdims=True) * y1
         yy = tf.concat([y1,y2],1) # expand y
         zz = tf.concat([dy1,dy2],1) # expand z
         return y * zz / yy
