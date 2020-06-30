@@ -6,7 +6,7 @@
     "num_time_interval": 160,
     "initeigen_low": 0.16,
     "initeigen_high": 0.17,
-    "second": 16000
+    "second": 10000
   },
   "nn_config": {
     "trig_order": 5,
@@ -15,7 +15,7 @@
     "lr_boundaries": [10000,15000],
     "ma_values": [0.1, 0.2, 0.9],
     "ma_boundaries": [10000, 15000],
-    "num_iterations": 20000,
+    "num_iterations": 40000,
     "batch_size": 1024,
     "valid_size": 1024,
     "logging_frequency": 100,

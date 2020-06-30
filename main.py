@@ -6,7 +6,7 @@ import numpy as np
 import equation as eqn
 from utility import get_config, DictionaryUtility
 from solver import FeedForwardModel
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
