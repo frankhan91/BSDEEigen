@@ -62,19 +62,6 @@ def main():
             else:
                 np.savetxt('{}_hist.csv'.format(path_prefix), figure_data, delimiter=",",
                            header="y_true,y_NN", comments='')
-            # for 1d
-            #print(np.shape(x_hist), np.shape(y_hist), np.shape(np.concatenate((x_hist,y_hist),axis=1)), np.shape(training_history))
-            # np.savetxt('{}_hist.csv'.format(path_prefix),np.concatenate((x_hist,y_hist,y_hist_true,y_second),axis=1), delimiter=",",
-            #             header="x1_plot,x2_plot,y_plot,y_true,y_true_second", comments='')
-            # f = plt.figure()
-            # ax1 = f.add_subplot(111)
-            # ax1.plot(figure_data[:,1],figure_data[:,3],'ro',label='NN')
-            # ax2 = f.add_subplot(111)
-            # ax2.plot(x_hist,y_hist_true,'bo', label='true')
-            # ax3 = f.add_subplot(111)
-            # ax3.plot(x_hist,y_second,'go', label='second')
             
-            # plt.hist(figure_data[:,1], bins='auto')
-
 if __name__ == '__main__':
     main()
