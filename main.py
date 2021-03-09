@@ -2,14 +2,13 @@ import json
 import logging
 import os
 import numpy as np
-#import tensorflow as tf
 import equation as eqn
 from utility import get_config, DictionaryUtility
 from solver import FeedForwardModel
-# import matplotlib.pyplot as plt
 
 import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
+# import tensorflow as tf
 
 FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_string('config_path', './configs/DoubleWell_d5_second.json',

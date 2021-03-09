@@ -1,11 +1,11 @@
 import logging
 import time
 import numpy as np
-#import tensorflow as tf
 from tensorflow.python.training import moving_averages
 
 import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
+# import tensorflow as tf
 
 TF_DTYPE = tf.float64
 DELTA_CLIP = 100.0
@@ -222,7 +222,7 @@ class FeedForwardModel(object):
                 self.init_infty_loss = tf.minimum(self.init_infty_loss, init_infty_loss2)
                 self.grad_error = tf.minimum(self.grad_error, grad_error2)
                 self.grad_infty_loss = tf.minimum(self.grad_infty_loss, grad_infty_loss2)
-        else:# for first state
+        else: # for first state
             true_init = self.bsde.true_y(self.x[:, :, 0])
             true_init = true_init / tf.sqrt(tf.reduce_mean(true_init ** 2))
             error_y = y_init - true_init

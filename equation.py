@@ -1,9 +1,9 @@
 import numpy as np
-#import tensorflow as tf
 from scipy.stats import multivariate_normal as normal
 
 import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
+# import tensorflow as tf
 
 class Equation(object):
     """Base class for defining PDE related function."""
