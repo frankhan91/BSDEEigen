@@ -10,7 +10,7 @@ import tensorflow as tf
 For Tensorflow 2.0, run the code directly.
 
 Run main.py for the code. Before running, choose the proper config you want to run by modifying line 15: the name of the config you want to run.
-"FPUni" is the Fokker Planck; "Sdg" is the linear Schrodinger; "CubicNew" is the cubic Schrodinger; "DoubleWell is for the double well problem".
+"FPUni" is the Fokker Planck; "Sdg" is the linear Schrodinger; "CubicNew" is the cubic Schrodinger; "DoubleWell" is for the double well problem with well separated eigenvalues;  "DoubleWell2" is for the double well problem with close eigenvalues.
 If there is "ma" in the json file, it means we use moving average for the normalization factor.
 If there is "second" in the json file, it means we are solving for the second eigenpair.
 You can also modify the parameters in teh configs.
