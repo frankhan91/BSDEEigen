@@ -1,6 +1,6 @@
 {
   "eqn_config": {
-    "eqn_name": "DoubleWell_dHighEigen",
+    "eqn_name": "DWSep_dHighEigen",
     "total_time": 0.2,
     "dim": 10,
     "num_time_interval": 320,
