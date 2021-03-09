@@ -144,7 +144,7 @@ class FeedForwardModel(object):
             else:
                 y_init = y_init / tf.sqrt(yl2) * sign
                 grad_y = grad_y * sign / tf.sqrt(yl2)
-            NN_consist_0 = z_init - grad_y
+            # NN_consist_0 = z_init - grad_y
             
             x_T = self.x[:, :, -1]
             z_T = net_z(x_T, need_grad=False)
@@ -212,16 +212,15 @@ class FeedForwardModel(object):
             self.grad_infty_loss = tf.reduce_max(tf.abs(error_second_z))
             self.NN_consist = tf.sqrt(tf.reduce_mean(NN_consist ** 2))
             # the following is for overcoming the sign problem, useful when net_y is not wel initialized
-            if True:
-                error_y_second2 = y_init + second_init
-                init_rel_loss2 = tf.sqrt(tf.reduce_mean(error_y_second2 ** 2))
-                init_infty_loss2 = tf.reduce_max(tf.abs(error_y_second2))
-                grad_error2 = tf.sqrt(tf.reduce_mean(error_second_z2 ** 2))
-                grad_infty_loss2 = tf.reduce_max(tf.abs(error_second_z2))
-                self.init_rel_loss = tf.minimum(self.init_rel_loss, init_rel_loss2)
-                self.init_infty_loss = tf.minimum(self.init_infty_loss, init_infty_loss2)
-                self.grad_error = tf.minimum(self.grad_error, grad_error2)
-                self.grad_infty_loss = tf.minimum(self.grad_infty_loss, grad_infty_loss2)
+            error_y_second2 = y_init + second_init
+            init_rel_loss2 = tf.sqrt(tf.reduce_mean(error_y_second2 ** 2))
+            init_infty_loss2 = tf.reduce_max(tf.abs(error_y_second2))
+            grad_error2 = tf.sqrt(tf.reduce_mean(error_second_z2 ** 2))
+            grad_infty_loss2 = tf.reduce_max(tf.abs(error_second_z2))
+            self.init_rel_loss = tf.minimum(self.init_rel_loss, init_rel_loss2)
+            self.init_infty_loss = tf.minimum(self.init_infty_loss, init_infty_loss2)
+            self.grad_error = tf.minimum(self.grad_error, grad_error2)
+            self.grad_infty_loss = tf.minimum(self.grad_infty_loss, grad_infty_loss2)
         else: # for first state
             true_init = self.bsde.true_y(self.x[:, :, 0])
             true_init = true_init / tf.sqrt(tf.reduce_mean(true_init ** 2))
@@ -233,16 +232,15 @@ class FeedForwardModel(object):
             self.grad_error = tf.sqrt(tf.reduce_mean(error_z ** 2))
             self.grad_infty_loss = tf.reduce_max(tf.abs(error_z))
             self.NN_consist = tf.sqrt(tf.reduce_mean(NN_consist ** 2))
-            if True:
-                error_y2 = y_init + true_init
-                init_rel_loss2 = tf.sqrt(tf.reduce_mean(error_y2 ** 2))
-                init_infty_loss2 = tf.reduce_max(tf.abs(error_y2))
-                grad_error2 = tf.sqrt(tf.reduce_mean(error_second_z ** 2))
-                grad_infty_loss2 = tf.reduce_max(tf.abs(error_second_z))
-                self.init_rel_loss = tf.minimum(self.init_rel_loss, init_rel_loss2)
-                self.init_infty_loss = tf.minimum(self.init_infty_loss, init_infty_loss2)
-                self.grad_error = tf.minimum(self.grad_error, grad_error2)
-                self.grad_infty_loss = tf.minimum(self.grad_infty_loss, grad_infty_loss2)
+            error_y2 = y_init + true_init
+            init_rel_loss2 = tf.sqrt(tf.reduce_mean(error_y2 ** 2))
+            init_infty_loss2 = tf.reduce_max(tf.abs(error_y2))
+            grad_error2 = tf.sqrt(tf.reduce_mean(error_second_z ** 2))
+            grad_infty_loss2 = tf.reduce_max(tf.abs(error_second_z))
+            self.init_rel_loss = tf.minimum(self.init_rel_loss, init_rel_loss2)
+            self.init_infty_loss = tf.minimum(self.init_infty_loss, init_infty_loss2)
+            self.grad_error = tf.minimum(self.grad_error, grad_error2)
+            self.grad_infty_loss = tf.minimum(self.grad_infty_loss, grad_infty_loss2)
         
         # train operations
         learning_rate = tf.train.piecewise_constant(global_step,
@@ -297,7 +295,7 @@ class FeedForwardModel(object):
             y_init = y_init_and_gradient[0]
             grad_y = y_init_and_gradient[1]
             z = net_z(x_init, need_grad=False)
-            z_init = z
+            #z_init = z
             
             yl2_batch = tf.reduce_mean(y_init ** 2)
             yl2_ma = tf.get_variable(
@@ -314,7 +312,7 @@ class FeedForwardModel(object):
             error_z = z / tf.sqrt(tf.reduce_mean(z ** 2)) - normed_true_z
             y_init = y_init / tf.sqrt(yl2) * sign
             grad_y = grad_y * sign / tf.sqrt(yl2)
-            NN_consist_0 = z_init - grad_y
+            #NN_consist_0 = z_init - grad_y
             
             x_T = self.x[:, :, -1]
             z_T = net_z(x_T, need_grad=False)
@@ -394,7 +392,7 @@ class FeedForwardModel(object):
                               trig_order=self.nn_config.trig_order, name='net_z')
             y_init_and_gradient = net_y(x_init, need_grad=True)
             y_init = y_init_and_gradient[0]
-            grad_y = y_init_and_gradient[1]
+            #grad_y = y_init_and_gradient[1]
             z = net_z(x_init, need_grad=False)
             
             yl2_batch = tf.reduce_mean(y_init ** 2)
@@ -408,7 +406,7 @@ class FeedForwardModel(object):
             true_z = self.bsde.true_z(x_init)
             sign = tf.sign(tf.reduce_sum(y_init))
             error_z = z - true_z
-            NN_consist_0 = z - grad_y * sign / tf.sqrt(yl2) * self.bsde.L2mean
+            #NN_consist_0 = z - grad_y * sign / tf.sqrt(yl2) * self.bsde.L2mean
             
             x_T = self.x[:, :, -1]
             z_T = net_z(x_T, need_grad=False)
