@@ -1,6 +1,6 @@
 {
   "eqn_config": {
-    "eqn_name": "DoubleWell2_d1Eigen",
+    "eqn_name": "DWClose_d1Eigen",
     "total_time": 0.2,
     "dim": 1,
     "num_time_interval": 160,
