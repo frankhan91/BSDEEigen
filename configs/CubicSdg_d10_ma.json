@@ -1,6 +1,6 @@
 {
   "eqn_config": {
-    "eqn_name": "CubicNewEigen",
+    "eqn_name": "CubicSdgEigen",
     "epsl": 1.0,
     "L2mean": 1.0,
     "norm_constant": 1.0511402766738,
