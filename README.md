@@ -2,9 +2,9 @@
 Accompanying code for [*Solving high-dimensional eigenvalue problems using deep neural networks: A diffusion Monte Carlo like approach*](https://doi.org/10.1016/j.jcp.2020.109792), Jiequn Han, Jianfeng Lu, Mo Zhou, Journal of Computational Physics, 423, 109792 (2020). Deep learning based algorithms for solving high-dimensional eigenvalue problems.
 
 Run main.py for the code. Before running, choose the proper config you want to run by modifying line 15: the name of the config you want to run.
-"FPUni" is the Fokker Planck; "Sdg" is the linear Schrodinger; "CubicNew" is the cubic Schrodinger; "DoubleWell" is for the double well problem with well separated eigenvalues;  "DoubleWell2" is for the double well problem with close eigenvalues.
-If there is "ma" in the json file, it means we use moving average for the normalization factor.
-If there is "second" in the json file, it means we are solving for the second eigenpair.
+"FPUni" is the Fokker Planck euqation with a uniform distribution as invariant measure (if you want a drift, change the "eqn_name" into "FPEigen" in the config); "Sdg" is the linear Schrodinger; "CubicSdg" is the cubic Schrodinger; "DWSep" is for the double well problem with well separated eigenvalues;  "DWClose" is for the double well problem with close eigenvalues.
+If there is "ma" in the name of the json file, it means we use moving average for the normalization factor.
+If there is "second" in the name of the json file, it means we are solving for the second eigenpair.
 
 Also, you need to choose the model by having only one of the lines in 43-48 not commented.
 When you choose the model, "linear" means we are solving linear eigenvalue problems (and similar for "nonlinear").
