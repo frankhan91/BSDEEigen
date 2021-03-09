@@ -274,9 +274,9 @@ class Sdg_d2Eigen(Equation):
         return - y * bases_sin / bases_cos * self.sigma
     
     
-class CubicNewEigen(Equation):
+class CubicSdgEigen(Equation):
     def __init__(self, eqn_config):
-        super(CubicNewEigen, self).__init__(eqn_config)
+        super(CubicSdgEigen, self).__init__(eqn_config)
         self.sigma = np.sqrt(2.0)
         self.true_eigen = -3.0
         self.epsl = eqn_config.epsl
@@ -301,10 +301,10 @@ class CubicNewEigen(Equation):
         return tf.exp(tf.reduce_mean(tf.cos(x), axis=1, keepdims=True)) / self.norm_constant * self.L2mean
     
 
-class DoubleWell2_d1Eigen(Equation):
+class DWClose_d1Eigen(Equation):
     #degenerate Schrodinger V(x)= A cos(2x) on [0, 2pi]
     def __init__(self, eqn_config):
-        super(DoubleWell2_d1Eigen, self).__init__(eqn_config)
+        super(DWClose_d1Eigen, self).__init__(eqn_config)
         self.N = 10
         self.sigma = np.sqrt(2.0)
         self.A = 5
@@ -373,10 +373,10 @@ class DoubleWell2_d1Eigen(Equation):
         return 0.3*self.true_z(x) + 3*self.second_z(x)
 
     
-class DoubleWell_dHighEigen(Equation):
+class DWSep_dHighEigen(Equation):
     #well-separate Schrodinger high dim
     def __init__(self, eqn_config):
-        super(DoubleWell_dHighEigen, self).__init__(eqn_config)
+        super(DWSep_dHighEigen, self).__init__(eqn_config)
         self.N = 10
         self.sigma = np.sqrt(2.0)
         self.A = np.concatenate(([1.5],0.2*np.ones(self.dim-1)))
