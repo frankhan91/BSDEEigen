@@ -5,7 +5,10 @@
     "dim": 5,
     "num_time_interval": 160,
     "initeigen_low": -0.5,
-    "initeigen_high": -0.5
+    "initeigen_high": -0.5,
+    "problem_type": "linear",
+    "eigenpair": "first",
+    "model_type": "consistent"
   },
   "nn_config": {
     "trig_order": 5,

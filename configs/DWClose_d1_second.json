@@ -6,7 +6,10 @@
     "num_time_interval": 160,
     "initeigen_low": -2.3,
     "initeigen_high": -2.2,
-    "second": "degenerate"
+    "problem_type": "linear",
+    "eigenpair": "second",
+    "model_type": "consistent",
+    "pretrain": "degenerate"
   },
   "nn_config": {
     "trig_order": 5,

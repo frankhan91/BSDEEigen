@@ -6,7 +6,10 @@
     "num_time_interval": 320,
     "initeigen_low": 0.14,
     "initeigen_high": 0.14,
-    "second": 20000
+    "problem_type": "linear",
+    "eigenpair": "second",
+    "model_type": "consistent",
+    "pretrain": 20000
   },
   "nn_config": {
     "trig_order": 5,

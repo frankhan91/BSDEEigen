@@ -1,11 +1,12 @@
 {
   "eqn_config": {
-    "eqn_name": "Sdg_d5Eigen",
-    "total_time": 0.3,
+    "eqn_name": "FPEigen",
+    "total_time": 0.2,
     "dim": 5,
     "num_time_interval": 80,
-    "initeigen_low": -0.2,
-    "initeigen_high": -0.2,
+    "initeigen_low": 0.5,
+    "initeigen_high": 0.5,
+    "coef":[1.0, 0.8, 0.6, 0.4, 0.2],
     "problem_type": "linear",
     "eigenpair": "first",
     "model_type": "consistent"
@@ -24,3 +25,5 @@
     "verbose": "True"
   }
 }
+
+

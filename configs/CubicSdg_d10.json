@@ -8,7 +8,10 @@
     "dim": 10,
     "num_time_interval": 200,
     "initeigen_low": -3.2,
-    "initeigen_high": -3.2
+    "initeigen_high": -3.2,
+    "problem_type": "nonlinear",
+    "eigenpair": "first",
+    "model_type": "consistent"
   },
   "nn_config": {
     "trig_order": 5,
