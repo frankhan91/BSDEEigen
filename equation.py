@@ -43,50 +43,10 @@ class Equation(object):
 
 class FPEigen(Equation):
     # eigenvalue problem for Fokker Planck operator on squares [0, 2pi]^d
-    # v(x) = sin(\sum_{i=1}^d c_i cos(x_i))   psi = exp(-v)
-    def __init__(self, eqn_config):
-        super(FPEigen, self).__init__(eqn_config)
-        self.sigma = np.sqrt(2.0)
-        self.c = eqn_config.coef
-        self.true_eigen = 0
-    
-    def negativegrad_v_np(self, x):
-        temp = np.sum(self.c * np.cos(x), axis=1, keepdims=True) #num_sample x 1
-        return self.c * np.sin(x) * np.cos(temp)
-    
-    def sample(self, num_sample):
-        dw_sample = normal.rvs(size=[num_sample,
-                                     self.dim,
-                                     self.num_time_interval]) * self.sqrt_delta_t
-        x_sample = np.zeros([num_sample, self.dim, self.num_time_interval + 1])
-        #for now X_0 is uniformly sampled
-        x_sample[:, :, 0] = np.random.uniform(0.0, 2*np.pi, size=[num_sample, self.dim])
-        for i in range(self.num_time_interval):
-            x_sample[:, :, i + 1] = x_sample[:, :, i] - \
-            self.negativegrad_v_np(x_sample[:, :, i])*self.delta_t + self.sigma * dw_sample[:, :, i]
-        return dw_sample, x_sample
-    
-    def f_tf(self, x, y, z):
-        temp = tf.reduce_sum(self.c * tf.cos(x), axis=1, keepdims=True) #num_sample x 1
-        temp1 = tf.cos(x) * tf.cos(temp)
-        temp2 = self.c * (tf.sin(x) ** 2) * tf.sin(temp)
-        return -y * tf.reduce_sum(self.c * (temp1 + temp2), axis=1, keepdims=True)
-    
-    def true_y(self, x):
-        temp = tf.reduce_sum(self.c * tf.cos(x), axis=1, keepdims=True) #num_sample x 1
-        return tf.exp(-tf.sin(temp))
-        
-    def true_z(self, x):
-        temp = tf.reduce_sum(self.c * tf.cos(x), axis=1, keepdims=True) #num_sample x 1
-        return tf.cos(temp) * tf.sin(x) * self.c * tf.exp(-tf.sin(temp)) * self.sigma
-
-
-class FPUniEigen(Equation):
-    # eigenvalue problem for Fokker Planck operator on squares [0, 2pi]^d
     # uniform sampling with no drift term
     # v(x) = sin(\sum_{i=1}^d c_i cos(x_i))   psi = exp(-v)
     def __init__(self, eqn_config):
-        super(FPUniEigen, self).__init__(eqn_config)
+        super(FPEigen, self).__init__(eqn_config)
         self.sigma = np.sqrt(2.0)
         self.c = eqn_config.coef
         self.true_eigen = 0
