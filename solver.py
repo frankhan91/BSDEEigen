@@ -54,7 +54,6 @@ class FeedForwardModel(object):
         training_history = []
         # for validation
         dw_valid, x_valid = self.bsde.sample_uniform(self.nn_config.valid_size)
-        #dw_valid, x_valid = self.bsde.sample(self.nn_config.valid_size)
         # can still use batch norm of samples in the validation phase
         feed_dict_valid = {self.dw: dw_valid, self.x: x_valid, self.is_training: False}
         # initialization
@@ -72,17 +71,16 @@ class FeedForwardModel(object):
                     logging.info(
                         "step: %5u,    train_loss: %.4e,   eg_err: %.4e, egfcn_l2_err: %.4e, egfcn_infty_err: %.4e, grad_l2_err: %.4e " % (
                             step, train_loss, eigen_error, init_rel_loss, init_infty_loss, grad_error) +
-                        "grad_infty_err: %.4e, consistency_loss: %.4e, norm_factor: %.4e, elapsed time %3u" % (
+                        "grad_infty_err: %.4e, consist_loss: %.4e, norm_fac: %.4e, elapsed time %3u" % (
                          grad_infty_loss, NN_consist, l2, elapsed_time))
             dw_train, x_train = self.bsde.sample_uniform(self.nn_config.batch_size)
-            # dw_train, x_train = self.bsde.sample(self.nn_config.batch_size)
             if self.second:
-                if self.eqn_config.pretrain == "degenerate":
-                    if step < 1000:
+                if self.eqn_config.pretrain == "degenerate": # for dwclose_d1
+                    if step < 1000: # use approximate solution to do supervised learning
                         self.sess.run(self.train_ops_supervise_approx,feed_dict={self.dw: dw_train, self.x: x_train, self.is_training: True})
-                    else:
+                    else: # use the default loss function
                         self.sess.run(self.train_ops,feed_dict={self.dw: dw_train, self.x: x_train, self.is_training: True})
-                else: #self.eqn_config.second marks the step to change loss function
+                else: # self.eqn_config.second marks the step to change loss function
                     if step < self.eqn_config.pretrain:
                         self.sess.run(self.train_ops_fixEigen,feed_dict={self.dw: dw_train, self.x: x_train, self.is_training: True})
                     else:
@@ -245,7 +243,6 @@ class FeedForwardModel(object):
             yl2 = tf.cond(self.is_training,
                           lambda: decay * yl2_ma + (1 - decay) * yl2_batch,
                           lambda: yl2_ma)
-            #yl2 = yl2_batch
             true_z = self.bsde.true_z(x_init)
             
             second_z = self.bsde.second_z(x_init)

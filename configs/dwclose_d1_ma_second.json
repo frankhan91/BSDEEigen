@@ -1,6 +1,7 @@
 {
   "eqn_config": {
     "eqn_name": "DWClose_d1Eigen",
+    "_comment": "results are inaccurate and divese in multiple runs due due to the closedness of eigenvalues",
     "total_time": 0.2,
     "dim": 1,
     "num_time_interval": 160,
