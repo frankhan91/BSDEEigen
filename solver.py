@@ -279,8 +279,6 @@ class FeedForwardModel(object):
             delta = y - y_xT
             
             # use linear approximation outside the clipped range
-            self.train_loss0 = tf.reduce_mean((y_init_and_gradient[0] - self.bsde.second_y(x_init))**2) + 0*tf.reduce_mean(NN_consist**2)\
-                + tf.reduce_mean((z_init - self.bsde.second_z(x_init))**2) + (self.eigen - self.bsde.second_eigen)**2
             self.train_loss1 = tf.reduce_mean((y_init_and_gradient[0] - self.bsde.second_y_approx(x_init))**2) + 0*tf.reduce_mean(NN_consist**2)\
                 + tf.reduce_mean((z_init - self.bsde.second_z_approx(x_init))**2) + (self.eigen - self.bsde.second_eigen)**2
             self.train_loss2 = tf.reduce_mean(
@@ -359,13 +357,6 @@ class FeedForwardModel(object):
                                              global_step=global_step, name='train_step')
         all_ops = [apply_op] + self.extra_train_ops
         self.train_ops = tf.group(*all_ops)
-        
-        grads0 = tf.gradients(self.train_loss0, trainable_variables)
-        optimizer0 = tf.train.AdamOptimizer(learning_rate=learning_rate)
-        apply_op0 = optimizer0.apply_gradients(zip(grads0, trainable_variables),
-                                             global_step=global_step, name='train_step')
-        all_ops0 = [apply_op0] + self.extra_train_ops
-        self.train_ops_supervise = tf.group(*all_ops0)
         
         grads1 = tf.gradients(self.train_loss1, trainable_variables)
         optimizer1 = tf.train.AdamOptimizer(learning_rate=learning_rate)
