@@ -70,10 +70,10 @@ class FeedForwardModel(object):
                 training_history.append([step, train_loss, eigen_error, init_rel_loss, init_infty_loss, grad_error, grad_infty_loss, NN_consist, l2, elapsed_time])
                 if self.nn_config.verbose:
                     logging.info(
-                        "step: %5u,    train_loss: %.4e,   eigen_error: %.4e, grad_error: %.4e, NN_consist: %.4e, l2: %.4e " % (
-                            step, train_loss, eigen_error, grad_error, NN_consist, l2) +
-                        "init_rel_loss: %.4e, init_infty_loss: %.4e, grad_infty_loss: %.4e, elapsed time %3u" % (
-                         init_rel_loss, init_infty_loss, grad_infty_loss, elapsed_time))
+                        "step: %5u,    train_loss: %.4e,   eg_err: %.4e, egfcn_l2_err: %.4e, egfcn_infty_err: %.4e, grad_l2_err: %.4e " % (
+                            step, train_loss, eigen_error, init_rel_loss, init_infty_loss, grad_error) +
+                        "grad_infty_err: %.4e, consistency_loss: %.4e, norm_factor: %.4e, elapsed time %3u" % (
+                         grad_infty_loss, NN_consist, l2, elapsed_time))
             dw_train, x_train = self.bsde.sample_uniform(self.nn_config.batch_size)
             # dw_train, x_train = self.bsde.sample(self.nn_config.batch_size)
             if self.second:

@@ -11,9 +11,9 @@ tf.disable_v2_behavior()
 # import tensorflow as tf
 
 FLAGS = tf.app.flags.FLAGS
-tf.app.flags.DEFINE_string('config_path', './configs/DWSep_d10_second.json',
+tf.app.flags.DEFINE_string('config_path', './configs/sdg_d2_ma.json',
                            """The path to load json file.""")
-tf.app.flags.DEFINE_string('exp_name', 'DWSep_d10_second',
+tf.app.flags.DEFINE_string('exp_name', 'sdg_d2_ma',
                            """The name of numerical experiments.""")
 tf.app.flags.DEFINE_integer('num_run', 1,
                             """The number of experiments to repeatedly run for the same problem.""")
@@ -50,7 +50,7 @@ def main():
                        training_history,
                        fmt=['%d', '%.5e', '%.5e', '%.5e', '%.5e', '%.5e', '%.5e', '%.5e', '%.5e', '%d'],
                        delimiter=",",
-                       header="step,train_loss, eigen_error, init_rel_loss, init_infty_loss, grad_error, grad_infty_loss, NN_consist,l2, elapsed_time",
+                       header="step,train_loss, eg_err, egfcn_l2_err, egfcn_infty_err, grad_l2_err, grad_infty_err, consistency_loss, norm_factor, elapsed_time",
                        comments='')
             figure_data = result[1]
             if dim == 1:
