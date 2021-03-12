@@ -276,9 +276,9 @@ class FeedForwardModel(object):
             delta = y - y_xT
             
             # use linear approximation outside the clipped range
-            self.train_loss1 = tf.reduce_mean((y_init_and_gradient[0] - self.bsde.second_y_approx(x_init))**2) + 0*tf.reduce_mean(NN_consist**2)\
+            self.train_loss_supervise_approx = tf.reduce_mean((y_init_and_gradient[0] - self.bsde.second_y_approx(x_init))**2) + 0*tf.reduce_mean(NN_consist**2)\
                 + tf.reduce_mean((z_init - self.bsde.second_z_approx(x_init))**2) + (self.eigen - self.bsde.second_eigen)**2
-            self.train_loss2 = tf.reduce_mean(
+            self.train_loss_fixEigen = tf.reduce_mean(
                 tf.where(tf.abs(delta) < DELTA_CLIP, tf.square(delta),
                          2 * DELTA_CLIP * tf.abs(delta) - DELTA_CLIP ** 2)) * 1000 \
                     + ((self.eigen - self.bsde.second_eigen - 0.1)**2) * 1000000 \
@@ -301,47 +301,26 @@ class FeedForwardModel(object):
             self.hist_true = hist_true_y / tf.sqrt(tf.reduce_mean(hist_true_y ** 2))
             y_second = self.bsde.second_y(self.x_hist)
             self.y_second = y_second / tf.sqrt(tf.reduce_mean(y_second ** 2))
-        if self.second: # for second state
-            second_init = self.bsde.second_y(self.x[:, :, 0])
-            second_init = second_init / tf.sqrt(tf.reduce_mean(second_init ** 2))
-            error_y_second = y_init - second_init
-            self.eigen_error = self.eigen - self.bsde.second_eigen
-            self.init_rel_loss = tf.sqrt(tf.reduce_mean(error_y_second ** 2))
-            self.init_infty_loss = tf.reduce_max(tf.abs(error_y_second))
-            self.l2 = yl2
-            self.grad_error = tf.sqrt(tf.reduce_mean(error_second_z ** 2))
-            self.grad_infty_loss = tf.reduce_max(tf.abs(error_second_z))
-            self.NN_consist = tf.sqrt(tf.reduce_mean(NN_consist ** 2))
-            # the following is for overcoming the sign problem, useful when net_y is not wel initialized
-            error_y_second2 = y_init + second_init
-            init_rel_loss2 = tf.sqrt(tf.reduce_mean(error_y_second2 ** 2))
-            init_infty_loss2 = tf.reduce_max(tf.abs(error_y_second2))
-            grad_error2 = tf.sqrt(tf.reduce_mean(error_second_z2 ** 2))
-            grad_infty_loss2 = tf.reduce_max(tf.abs(error_second_z2))
-            self.init_rel_loss = tf.minimum(self.init_rel_loss, init_rel_loss2)
-            self.init_infty_loss = tf.minimum(self.init_infty_loss, init_infty_loss2)
-            self.grad_error = tf.minimum(self.grad_error, grad_error2)
-            self.grad_infty_loss = tf.minimum(self.grad_infty_loss, grad_infty_loss2)
-        else: # for first state
-            true_init = self.bsde.true_y(self.x[:, :, 0])
-            true_init = true_init / tf.sqrt(tf.reduce_mean(true_init ** 2))
-            error_y = y_init - true_init
-            self.eigen_error = self.eigen - self.bsde.true_eigen
-            self.init_rel_loss = tf.sqrt(tf.reduce_mean(error_y ** 2))
-            self.init_infty_loss = tf.reduce_max(tf.abs(error_y))
-            self.l2 = yl2
-            self.grad_error = tf.sqrt(tf.reduce_mean(error_z ** 2))
-            self.grad_infty_loss = tf.reduce_max(tf.abs(error_z))
-            self.NN_consist = tf.sqrt(tf.reduce_mean(NN_consist ** 2))
-            error_y2 = y_init + true_init
-            init_rel_loss2 = tf.sqrt(tf.reduce_mean(error_y2 ** 2))
-            init_infty_loss2 = tf.reduce_max(tf.abs(error_y2))
-            grad_error2 = tf.sqrt(tf.reduce_mean(error_second_z ** 2))
-            grad_infty_loss2 = tf.reduce_max(tf.abs(error_second_z))
-            self.init_rel_loss = tf.minimum(self.init_rel_loss, init_rel_loss2)
-            self.init_infty_loss = tf.minimum(self.init_infty_loss, init_infty_loss2)
-            self.grad_error = tf.minimum(self.grad_error, grad_error2)
-            self.grad_infty_loss = tf.minimum(self.grad_infty_loss, grad_infty_loss2)
+        second_init = self.bsde.second_y(self.x[:, :, 0])
+        second_init = second_init / tf.sqrt(tf.reduce_mean(second_init ** 2))
+        error_y_second = y_init - second_init
+        self.eigen_error = self.eigen - self.bsde.second_eigen
+        self.init_rel_loss = tf.sqrt(tf.reduce_mean(error_y_second ** 2))
+        self.init_infty_loss = tf.reduce_max(tf.abs(error_y_second))
+        self.l2 = yl2
+        self.grad_error = tf.sqrt(tf.reduce_mean(error_second_z ** 2))
+        self.grad_infty_loss = tf.reduce_max(tf.abs(error_second_z))
+        self.NN_consist = tf.sqrt(tf.reduce_mean(NN_consist ** 2))
+        # the following is for overcoming the sign problem, useful when net_y is not wel initialized
+        error_y_second2 = y_init + second_init
+        init_rel_loss2 = tf.sqrt(tf.reduce_mean(error_y_second2 ** 2))
+        init_infty_loss2 = tf.reduce_max(tf.abs(error_y_second2))
+        grad_error2 = tf.sqrt(tf.reduce_mean(error_second_z2 ** 2))
+        grad_infty_loss2 = tf.reduce_max(tf.abs(error_second_z2))
+        self.init_rel_loss = tf.minimum(self.init_rel_loss, init_rel_loss2)
+        self.init_infty_loss = tf.minimum(self.init_infty_loss, init_infty_loss2)
+        self.grad_error = tf.minimum(self.grad_error, grad_error2)
+        self.grad_infty_loss = tf.minimum(self.grad_infty_loss, grad_infty_loss2)
         
         # train operations
         learning_rate = tf.train.piecewise_constant(global_step,
@@ -355,19 +334,19 @@ class FeedForwardModel(object):
         all_ops = [apply_op] + self.extra_train_ops
         self.train_ops = tf.group(*all_ops)
         
-        grads1 = tf.gradients(self.train_loss1, trainable_variables)
-        optimizer1 = tf.train.AdamOptimizer(learning_rate=learning_rate)
-        apply_op1 = optimizer1.apply_gradients(zip(grads1, trainable_variables),
+        grads_supervise_approx = tf.gradients(self.train_loss_supervise_approx, trainable_variables)
+        optimizer_supervise_approx = tf.train.AdamOptimizer(learning_rate=learning_rate)
+        apply_op_supervise_approx = optimizer_supervise_approx.apply_gradients(zip(grads_supervise_approx, trainable_variables),
                                              global_step=global_step, name='train_step')
-        all_ops1 = [apply_op1] + self.extra_train_ops
-        self.train_ops_supervise_approx = tf.group(*all_ops1)
+        all_ops_supervise_approx = [apply_op_supervise_approx] + self.extra_train_ops
+        self.train_ops_supervise_approx = tf.group(*all_ops_supervise_approx)
         
-        grads2 = tf.gradients(self.train_loss2, trainable_variables)
-        optimizer2 = tf.train.AdamOptimizer(learning_rate=learning_rate)
-        apply_op2 = optimizer2.apply_gradients(zip(grads2, trainable_variables),
+        grads_fixEigen = tf.gradients(self.train_loss_fixEigen, trainable_variables)
+        optimizer_fixEigen = tf.train.AdamOptimizer(learning_rate=learning_rate)
+        apply_op_fixEigen = optimizer_fixEigen.apply_gradients(zip(grads_fixEigen, trainable_variables),
                                              global_step=global_step, name='train_step')
-        all_ops2 = [apply_op2] + self.extra_train_ops
-        self.train_ops_fixEigen = tf.group(*all_ops2)
+        all_ops_fixEigen = [apply_op_fixEigen] + self.extra_train_ops
+        self.train_ops_fixEigen = tf.group(*all_ops_fixEigen)
         
         self.t_build = time.time() - start_time
 
