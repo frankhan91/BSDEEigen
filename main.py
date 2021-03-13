@@ -13,7 +13,7 @@ tf.disable_v2_behavior()
 FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_string('config_path', './configs/sdg_d2_ma.json',
                            """The path to load json file.""")
-tf.app.flags.DEFINE_string('exp_name', 'sdg_d2_ma',
+tf.app.flags.DEFINE_string('exp_name', None,
                            """The name of numerical experiments.""")
 tf.app.flags.DEFINE_integer('num_run', 1,
                             """The number of experiments to repeatedly run for the same problem.""")
@@ -24,6 +24,8 @@ tf.app.flags.DEFINE_string('log_dir1', './logs',
 def main():
     config = get_config(FLAGS.config_path)
     bsde = getattr(eqn, config.eqn_config.eqn_name)(config.eqn_config)
+    if FLAGS.exp_name is None: # use config name as exp_name
+        FLAGS.exp_name = os.path.splitext(os.path.basename(FLAGS.config_path))[0]
     if not os.path.exists(FLAGS.log_dir1):
         os.mkdir(FLAGS.log_dir1)
     path_prefix = os.path.join(FLAGS.log_dir1, FLAGS.exp_name)

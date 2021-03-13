@@ -16,6 +16,14 @@ python main.py --config_path=configs/fp_d2.json
 If there is "ma" in the name of the config file, it means to use moving average for the normalization factor.
 If there is "second" in the name of the config file, it means to solve the second eigenpair.
 
+| Experiments in the paper                                     | Config names                                                 |
+|-----------------------------------------------------------------------------------------------------------------------------|
+| Fokker-Planck (Figure 2)                                     | fp_d5_ma.json, fp_d10_ma.json                                |
+| Linear Schrodinger (Figure 3)                                | sdg_d5_ma.json, sdg_d10_ma.json                              |
+| Nonlinear Schrodinger (Figure 4)                             | cubicsdg_d5_ma.json, cubicsdg_d10_ma.json                    |
+| Linear Schrodinger with double-well potential (Figure 5)     | dwsep_d10_ma.json, dwsep_d10_ma_second.json                  |
+
+
 **Fileds in config files**
 "problem_type": "linear" means to solve linear eigenvalue problems (and similar for "nonlinear").
 "eigenpair": "first" means to solve the first eigenpair (and similar for "second").
