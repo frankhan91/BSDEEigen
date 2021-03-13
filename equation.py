@@ -333,10 +333,10 @@ class DWClose_d1Eigen(Equation):
         return 0.3*self.true_z(x) + 3*self.second_z(x)
 
     
-class DWSep_dHighEigen(Equation):
-    #well-separate Schrodinger high dim
+class DWSepEigen(Equation):
+    # well-separate Schrodinger example for arbitrary dimensions
     def __init__(self, eqn_config):
-        super(DWSep_dHighEigen, self).__init__(eqn_config)
+        super(DWSepEigen, self).__init__(eqn_config)
         self.N = 10
         self.sigma = np.sqrt(2.0)
         self.A = np.concatenate(([1.5],0.2*np.ones(self.dim-1)))
@@ -361,7 +361,11 @@ class DWSep_dHighEigen(Equation):
                       4.698663151849139795e-16,-2.397216509273572312e-19,
                       9.363952505944370821e-23,3.060820295240397227e-26]
         # coef3 is to put coef0 and coef2s together, this is not a list
-        self.coef3 = np.concatenate([np.reshape(self.coef0,[self.N,1]), np.repeat(np.reshape(self.coef2,[self.N,1]), self.dim-1, axis=1)],axis=1)
+        self.coef3 = np.concatenate([
+            np.reshape(self.coef0,[self.N,1]), 
+            np.repeat(np.reshape(self.coef2,[self.N,1]), self.dim-1, axis=1)
+            ],axis=1
+        )
     
     def f_tf(self, x, y, z):
         return - y * tf.reduce_sum(self.A * tf.cos(2*x), axis=1, keepdims=True)

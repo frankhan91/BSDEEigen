@@ -1,6 +1,6 @@
 {
   "eqn_config": {
-    "eqn_name": "DWSep_dHighEigen",
+    "eqn_name": "DWSepEigen",
     "total_time": 0.2,
     "dim": 10,
     "num_time_interval": 320,

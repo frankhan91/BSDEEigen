@@ -35,9 +35,11 @@ class FeedForwardModel(object):
         self.init_infty_loss, self.grad_infty_loss = None, None
         self.train_ops, self.t_build = None, None
         self.train_ops_supervise, self.train_ops_supervise_approx, self.train_ops_fixEigen = None, None, None
-        self.eigen = tf.get_variable('eigen', shape=[1], dtype=TF_DTYPE,
-                                      initializer=tf.random_uniform_initializer(self.eqn_config.initeigen_low, self.eqn_config.initeigen_high),
-                                      trainable=True)
+        self.eigen = tf.get_variable(
+            'eigen', shape=[1], dtype=TF_DTYPE,
+            initializer=tf.random_uniform_initializer(self.eqn_config.initeigen_low, self.eqn_config.initeigen_high),
+            trainable=True
+        )
         self.x_hist = tf.placeholder(TF_DTYPE, [None, self.dim], name='x_hist')
         self.hist_NN = None
         self.hist_true = None
@@ -46,7 +48,7 @@ class FeedForwardModel(object):
         self.second = False
         if self.eigenpair == 'second':
             self.second = True
-            print("second")
+            print("Solving the second eigenpair.")
     
     def train(self):
         start_time = time.time()
@@ -63,10 +65,18 @@ class FeedForwardModel(object):
         for step in range(self.nn_config.num_iterations+1):
             if step % self.nn_config.logging_frequency == 0:
                 train_loss, eigen_error, init_rel_loss, grad_error, NN_consist, l2, init_infty_loss, grad_infty_loss = self.sess.run(
-                    [self.train_loss, self.eigen_error, self.init_rel_loss, self.grad_error, self.NN_consist, self.l2, self.init_infty_loss, self.grad_infty_loss],
+                    [
+                        self.train_loss, self.eigen_error, self.init_rel_loss, self.grad_error, 
+                        self.NN_consist, self.l2, self.init_infty_loss, self.grad_infty_loss
+                    ],
                     feed_dict=feed_dict_valid)
                 elapsed_time = time.time()-start_time+self.t_build
-                training_history.append([step, train_loss, eigen_error, init_rel_loss, init_infty_loss, grad_error, grad_infty_loss, NN_consist, l2, elapsed_time])
+                training_history.append(
+                    [
+                        step, train_loss, eigen_error, init_rel_loss, init_infty_loss, 
+                        grad_error, grad_infty_loss, NN_consist, l2, elapsed_time
+                    ]
+                )
                 if self.nn_config.verbose:
                     logging.info(
                         "step: %5u,    train_loss: %.4e,   eg_err: %.4e, egfcn_l2_err: %.4e, egfcn_infty_err: %.4e, grad_l2_err: %.4e " % (
@@ -98,7 +108,7 @@ class FeedForwardModel(object):
                     figure_data = np.concatenate([y_hist_true, y_hist], axis=1)
         if self.dim == 1:
             figure_data = np.concatenate([x_hist,figure_data], axis=1)
-        return np.array(training_history), figure_data
+        return np.array(training_history, dtype=object), figure_data
 
     def build(self):
         start_time = time.time()
@@ -276,8 +286,11 @@ class FeedForwardModel(object):
             delta = y - y_xT
             
             # use linear approximation outside the clipped range
-            self.train_loss_supervise_approx = tf.reduce_mean((y_init_and_gradient[0] - self.bsde.second_y_approx(x_init))**2) + 0*tf.reduce_mean(NN_consist**2)\
-                + tf.reduce_mean((z_init - self.bsde.second_z_approx(x_init))**2) + (self.eigen - self.bsde.second_eigen)**2
+            self.train_loss_supervise_approx = \
+                tf.reduce_mean((y_init_and_gradient[0] - self.bsde.second_y_approx(x_init))**2) \
+                    + 0*tf.reduce_mean(NN_consist**2) \
+                    + tf.reduce_mean((z_init - self.bsde.second_z_approx(x_init))**2) \
+                    + (self.eigen - self.bsde.second_eigen)**2
             self.train_loss_fixEigen = tf.reduce_mean(
                 tf.where(tf.abs(delta) < DELTA_CLIP, tf.square(delta),
                          2 * DELTA_CLIP * tf.abs(delta) - DELTA_CLIP ** 2)) * 1000 \
@@ -311,7 +324,7 @@ class FeedForwardModel(object):
         self.grad_error = tf.sqrt(tf.reduce_mean(error_second_z ** 2))
         self.grad_infty_loss = tf.reduce_max(tf.abs(error_second_z))
         self.NN_consist = tf.sqrt(tf.reduce_mean(NN_consist ** 2))
-        # the following is for overcoming the sign problem, useful when net_y is not wel initialized
+        # the following is to overcome the sign problem, useful when net_y is not wel initialized
         error_y_second2 = y_init + second_init
         init_rel_loss2 = tf.sqrt(tf.reduce_mean(error_y_second2 ** 2))
         init_infty_loss2 = tf.reduce_max(tf.abs(error_y_second2))
