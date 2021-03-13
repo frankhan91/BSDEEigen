@@ -17,7 +17,7 @@ If there is "ma" in the name of the config file, it means to use moving average 
 If there is "second" in the name of the config file, it means to solve the second eigenpair.
 
 | Experiments in the paper                                     | Config names                                                 |
-|-----------------------------------------------------------------------------------------------------------------------------|
+|--------------------------------------------------------------|--------------------------------------------------------------|
 | Fokker-Planck (Figure 2)                                     | fp_d5_ma.json, fp_d10_ma.json                                |
 | Linear Schrodinger (Figure 3)                                | sdg_d5_ma.json, sdg_d10_ma.json                              |
 | Nonlinear Schrodinger (Figure 4)                             | cubicsdg_d5_ma.json, cubicsdg_d10_ma.json                    |
